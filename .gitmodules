@@ -4,3 +4,6 @@
 [submodule "memcpy"]
 	path = memcpy
 	url = git@github.com:dpronin/memcpy.git
+[submodule "mash"]
+	path = mash
+	url = git@github.com:dpronin/mash.git
