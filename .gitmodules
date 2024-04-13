@@ -1,3 +1,6 @@
 [submodule "fintech_task"]
 	path = fintech_task
 	url = git@github.com:dpronin/fintech_task.git
+[submodule "memcpy"]
+	path = memcpy
+	url = git@github.com:dpronin/memcpy.git
