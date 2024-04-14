@@ -7,3 +7,6 @@
 [submodule "mash"]
 	path = mash
 	url = git@github.com:dpronin/mash.git
+[submodule "regexp"]
+	path = regexp
+	url = git@github.com:dpronin/regexp.git
