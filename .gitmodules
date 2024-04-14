@@ -10,3 +10,6 @@
 [submodule "regexp"]
 	path = regexp
 	url = git@github.com:dpronin/regexp.git
+[submodule "gparser"]
+	path = gparser
+	url = git@github.com:dpronin/gparser.git
