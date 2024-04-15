@@ -16,12 +16,6 @@
 
 namespace {
 
-template <std::ranges::input_range Range> void print(Range const &v) {
-  std::ranges::copy(
-      v, std::ostream_iterator<typename std::iterator_traits<
-             std::ranges::iterator_t<Range>>::value_type>(std::cout, " "));
-}
-
 [[noreturn]] void show_help(char const *program) {
   std::string_view const help{
       R"HELP(
