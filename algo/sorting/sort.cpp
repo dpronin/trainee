@@ -12,7 +12,6 @@
 #include <iostream>
 #include <iterator>
 #include <ranges>
-#include <sys/select.h>
 #include <vector>
 
 #include "sort_all.hpp"
@@ -47,7 +46,7 @@ template <std::ranges::input_range Range> void print(Range const &v) {
   };
   static_assert(algo::_default_ == algo::bubble,
                 "change help page to make it consistent");
-  std::cout << program << " [params] [item1] [item2] ...\n";
+  std::cout << program << " [params] ...\n";
   std::cout << help << std::endl;
   exit(EXIT_SUCCESS);
 }
