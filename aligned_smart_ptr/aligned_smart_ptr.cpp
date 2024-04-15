@@ -1,13 +1,16 @@
 #include <cstdlib>
 
 #include <exception>
+#include <format>
 #include <iostream>
 #include <limits>
 #include <memory>
 #include <new>
-#include <vector>
+#include <ranges>
 #include <typeinfo>
-#include <format>
+#include <vector>
+
+#include <unistd.h>
 
 template <typename T, size_t Alignment = alignof(T)> class Allocator {
 public:
@@ -31,10 +34,13 @@ public:
   Allocator(Allocator &&other) = default;
 
   T *allocate(std::size_t n) {
+    std::cout << std::format(
+                     "allocate called for {}, required {} bytes {} times",
+                     typeid(T).name(), sizeof(T), n)
+              << std::endl;
+
     if (n > std::numeric_limits<std::size_t>::max() / sizeof(T))
       throw std::bad_array_new_length();
-
-    std::cout << std::format("allocate called for {}, required {} bytes {} times", typeid(T).name(), sizeof(T), n) << std::endl;
 
     if (auto *p = static_cast<T *>(aligned_alloc(Alignment, sizeof(T) * n)))
       return p;
@@ -45,13 +51,62 @@ public:
   void deallocate(T *p, std::size_t n) noexcept { std::free(p); }
 };
 
+template <typename T = void> class PageAlignedAllocator {
+public:
+  template <typename U> struct rebind {
+    using other = PageAlignedAllocator<U>;
+  };
+
+  using value_type = T;
+
+  constexpr PageAlignedAllocator() = default;
+  ~PageAlignedAllocator() = default;
+
+  template <typename U>
+  constexpr explicit PageAlignedAllocator(
+      PageAlignedAllocator<U> const &other) noexcept {}
+
+  PageAlignedAllocator(PageAlignedAllocator<T> const &other) = default;
+  PageAlignedAllocator(PageAlignedAllocator<T> &&other) = default;
+
+  T *allocate(std::size_t n) {
+    std::cout << std::format(
+                     "allocate called for {}, required {} bytes {} times",
+                     typeid(T).name(), sizeof(T), n)
+              << std::endl;
+
+    if (n > std::numeric_limits<std::size_t>::max() / sizeof(T))
+      throw std::bad_array_new_length();
+
+    if (auto const page_sz = getpagesize(); page_sz > 0) {
+      if (auto *p =
+              static_cast<T *>(std::aligned_alloc(page_sz, sizeof(T) * n)))
+        return p;
+    }
+
+    throw std::bad_alloc();
+  }
+
+  void deallocate(T *p, std::size_t n) noexcept { std::free(p); }
+};
+
 int main(int argc, char const *argv[]) try {
-  Allocator<int, 1 << 28> alloc{};
   std::vector<std::shared_ptr<int>> v;
-  for (int i = 0; i < 1 << 4; ++i) {
-    v.push_back(std::allocate_shared<int>(alloc, 0));
+
+  Allocator<int, 1 << 28> a1{};
+  for (auto const i : std::views::iota(0, 1 << 4)) {
+    v.push_back(std::allocate_shared<int>(a1, i));
     std::cout << v.back() << std::endl;
   }
+
+  v.clear();
+
+  PageAlignedAllocator<> a2{};
+  for (auto const i : std::views::iota(0, 1 << 4)) {
+    v.push_back(std::allocate_shared<int>(a2, i));
+    std::cout << v.back() << std::endl;
+  }
+
   return 0;
 } catch (std::exception const &ex) {
   std::cerr << ex.what() << std::endl;
