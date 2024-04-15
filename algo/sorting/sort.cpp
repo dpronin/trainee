@@ -1,10 +1,17 @@
+/**
+ * Example of running:
+ *
+ * $ echo -1 2 9 10 0 -7 19 -9 5 5 40 | ./sort --algo heap
+ *
+ * Author: Denis Pronin <dannftk@yandex.ru>
+ */
+
 #include <cstddef>
 
 #include <algorithm>
 #include <iostream>
 #include <iterator>
 #include <ranges>
-#include <sstream>
 #include <sys/select.h>
 #include <vector>
 
@@ -29,7 +36,6 @@ template <std::ranges::input_range Range> void print(Range const &v) {
   std::ranges::copy(
       v, std::ostream_iterator<typename std::iterator_traits<
              std::ranges::iterator_t<Range>>::value_type>(std::cout, " "));
-  std::cout << std::endl;
 }
 
 [[noreturn]] void show_help(char const *program) {
@@ -77,15 +83,15 @@ int main(int argc, char const *argv[]) {
       show_help(argv[0]);
       /* must not be here */
       std::abort();
-    } else {
-      int x;
-      std::istringstream{*arg} >> x;
-      v.push_back(x);
     }
   }
 
+  std::copy(std::istream_iterator<int>(std::cin), std::istream_iterator<int>(),
+            std::back_inserter(v));
+
   std::cout << "unsorted:\n";
   print(v);
+  std::cout << std::endl;
 
   switch (algo) {
   case algo::bubble:
@@ -116,6 +122,7 @@ int main(int argc, char const *argv[]) {
 
   std::cout << "sorted:\n";
   print(v);
+  std::cout << std::endl;
 
   return 0;
 }
