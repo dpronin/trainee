@@ -1,11 +1,11 @@
 #include <cstdlib>
 
 #include <exception>
-#include <format>
 #include <iostream>
 #include <limits>
 #include <memory>
 #include <new>
+#include <print>
 #include <ranges>
 #include <typeinfo>
 #include <vector>
@@ -34,10 +34,8 @@ public:
   Allocator(Allocator &&other) = default;
 
   T *allocate(std::size_t n) {
-    std::cout << std::format(
-                     "allocate called for {}, required {} bytes {} times",
-                     typeid(T).name(), sizeof(T), n)
-              << std::endl;
+    std::println("allocate called for {}, required {} bytes {} times",
+                 typeid(T).name(), sizeof(T), n);
 
     if (n > std::numeric_limits<std::size_t>::max() / sizeof(T))
       throw std::bad_array_new_length();
@@ -70,10 +68,8 @@ public:
   PageAlignedAllocator(PageAlignedAllocator<T> &&other) = default;
 
   T *allocate(std::size_t n) {
-    std::cout << std::format(
-                     "allocate called for {}, required {} bytes {} times",
-                     typeid(T).name(), sizeof(T), n)
-              << std::endl;
+    std::println("allocate called for {}, required {} bytes {} times",
+                 typeid(T).name(), sizeof(T), n);
 
     if (n > std::numeric_limits<std::size_t>::max() / sizeof(T))
       throw std::bad_array_new_length();
@@ -96,7 +92,7 @@ int main(int argc, char const *argv[]) try {
   Allocator<int, 1 << 28> a1{};
   for (auto const i : std::views::iota(0, 1 << 4)) {
     v.push_back(std::allocate_shared<int>(a1, i));
-    std::cout << v.back() << std::endl;
+    std::println("{}", static_cast<void *>(v.back().get()));
   }
 
   v.clear();
@@ -104,7 +100,7 @@ int main(int argc, char const *argv[]) try {
   PageAlignedAllocator<> a2{};
   for (auto const i : std::views::iota(0, 1 << 4)) {
     v.push_back(std::allocate_shared<int>(a2, i));
-    std::cout << v.back() << std::endl;
+    std::println("{}", static_cast<void *>(v.back().get()));
   }
 
   return 0;
