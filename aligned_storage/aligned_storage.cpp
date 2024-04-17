@@ -1,30 +1,29 @@
 /**
- * Since C++23 std::aligned_storage and relatives/derivatives have been marked as deprecated
+ * Since C++23 std::aligned_storage and relatives/derivatives have been marked
+ * as deprecated
  *
- * In this demo I show up how you can elaborate your own aligned_storage based on new well-known C++
- * features
+ * In this demo I show up how you can elaborate your own aligned_storage based
+ * on new well-known C++ features
  *
  * Author: Denis Pronin <dannftk@yandex.ru>
  */
 
 #include <cstddef>
 
-#include <iostream>
+#include <print>
 
 template <typename T, size_t Align>
 #ifdef __clang__
-struct aligned_storage_base {
+struct aligned_storage_impl {
   alignas(Align) std::byte data[sizeof(T)];
 };
 #else
-using aligned_storage_base = alignas(Align) std::byte[sizeof(T)];
+using aligned_storage_impl = alignas(Align) std::byte[sizeof(T)];
 #endif
 
-template <typename T, size_t Align = alignof(T)>
-struct aligned_storage : aligned_storage_base<T, Align>
-{
+template <typename T, size_t Align = alignof(T)> struct aligned_storage {
   static_assert(!(Align < alignof(T)));
-  using type = aligned_storage_base<T, Align>;
+  using type = aligned_storage_impl<T, Align>;
 };
 
 template <typename T, size_t Align = alignof(T)>
@@ -45,7 +44,7 @@ int main(int argc, char const *argv[]) {
   int *ju = &reinterpret_cast<int &>(j);
   *ju = 13;
 
-  std::cout << *iu << " " << *ju << std::endl;
+  std::println("{} {}", *iu, *ju);
 
   return 0;
 }
