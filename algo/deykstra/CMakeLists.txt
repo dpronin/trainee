@@ -6,4 +6,4 @@ add_executable(${PROJECT_NAME}
     deykstra.cpp
 )
 
-target_compile_features(${PROJECT_NAME} PRIVATE cxx_std_20)
+target_compile_features(${PROJECT_NAME} PRIVATE cxx_std_23)

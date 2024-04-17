@@ -1,16 +1,16 @@
 #include <limits>
-#include <vector>
+#include <print>
 #include <unordered_set>
-#include <iostream>
+#include <vector>
 
 struct neigh {
-    int id;
-    int weight;
+  int id;
+  int weight;
 };
 
 struct node {
-    int id;
-    std::vector<neigh> neighs;
+  int id;
+  std::vector<neigh> neighs;
 };
 
 using node_t = node;
@@ -19,61 +19,60 @@ using costs_t = std::vector<int>;
 using processed_t = std::unordered_set<int>;
 using parents_t = std::vector<int>;
 
-node_t const* find_lowest_cost_node(graph_t const &graph, costs_t const &costs, processed_t const &processed)
-{
-    int lowest_cost_node = std::numeric_limits<int>::max();
-    node_t const *node = nullptr;
-    for (int i = 0; i < costs.size(); ++i) {
-        if (!processed.contains(i) && costs[i] < lowest_cost_node) {
-            node = &graph[i];
-            lowest_cost_node = costs[i];
-        }
+node_t const *find_lowest_cost_node(graph_t const &graph, costs_t const &costs,
+                                    processed_t const &processed) {
+  int lowest_cost_node = std::numeric_limits<int>::max();
+  node_t const *node = nullptr;
+  for (int i = 0; i < costs.size(); ++i) {
+    if (!processed.contains(i) && costs[i] < lowest_cost_node) {
+      node = &graph[i];
+      lowest_cost_node = costs[i];
     }
-    return node;
+  }
+  return node;
 }
 
-void deykstra(graph_t const &graph, costs_t &costs, parents_t &parents)
-{
-    processed_t processed;
+void deykstra(graph_t const &graph, costs_t &costs, parents_t &parents) {
+  processed_t processed;
 
-    while (auto const *node = find_lowest_cost_node(graph, costs, processed)) {
-        auto const cost = costs[node->id];
-        for (auto const &neigh : node->neighs) {
-            if (auto const new_cost = cost + neigh.weight; new_cost < costs[neigh.id]) {
-                costs[neigh.id] = new_cost;
-                parents[neigh.id] = node->id;
-            }
-        }
-        processed.insert(node->id);
+  while (auto const *node = find_lowest_cost_node(graph, costs, processed)) {
+    auto const cost = costs[node->id];
+    for (auto const &neigh : node->neighs) {
+      if (auto const new_cost = cost + neigh.weight;
+          new_cost < costs[neigh.id]) {
+        costs[neigh.id] = new_cost;
+        parents[neigh.id] = node->id;
+      }
     }
+    processed.insert(node->id);
+  }
 }
 
-int main(int argc, char const *argv[])
-{
-    graph_t graph;
+int main(int argc, char const *argv[]) {
+  graph_t graph;
 
-    graph.push_back({0, {{1, 6}, {2, 2}}});
-    graph.push_back({1, {{3, 1}}});
-    graph.push_back({2, {{1, 3}, {3, 5}}});
-    graph.push_back({3, {}});
+  graph.push_back({0, {{1, 6}, {2, 2}}});
+  graph.push_back({1, {{3, 1}}});
+  graph.push_back({2, {{1, 3}, {3, 5}}});
+  graph.push_back({3, {}});
 
-    costs_t costs(graph.size(), std::numeric_limits<int>::max());
-    parents_t parents(graph.size(), -1);
+  costs_t costs(graph.size(), std::numeric_limits<int>::max());
+  parents_t parents(graph.size(), -1);
 
-    for (auto const &neigh : graph[0].neighs) {
-        costs[neigh.id] = neigh.weight;
-        parents[neigh.id] = graph[0].id;
-    }
+  for (auto const &neigh : graph[0].neighs) {
+    costs[neigh.id] = neigh.weight;
+    parents[neigh.id] = graph[0].id;
+  }
 
-    deykstra(graph, costs, parents);
+  deykstra(graph, costs, parents);
 
-    for (int i = 0; i < parents.size(); ++i)
-        std::cout << i << " -> " << parents[i] << std::endl;
+  for (int i = 0; i < parents.size(); ++i)
+    std::println("{} -> {}", i, parents[i]);
+  std::println("");
 
-    std::cout << std::endl;
+  for (int i = 0; i < parents.size(); ++i)
+    std::println("{} -> {}", i, costs[i]);
+  std::println("");
 
-    for (int i = 0; i < costs.size(); ++i)
-        std::cout << i << " -> " << costs[i] << std::endl;
-
-    return 0;
+  return 0;
 }
