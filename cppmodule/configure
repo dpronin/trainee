@@ -1,0 +1,1 @@
+mkdir -p build && rm -rf build/* && cmake -G Ninja -B build $@
