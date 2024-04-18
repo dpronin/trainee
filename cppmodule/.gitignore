@@ -1,2 +1,4 @@
 .cache
 cmakebuild
+cppmodule
+foo.pcm
