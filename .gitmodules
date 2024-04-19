@@ -1,6 +1,3 @@
-[submodule "fintech_task"]
-	path = fintech_task
-	url = git@github.com:dpronin/fintech_task.git
 [submodule "memcpy"]
 	path = memcpy
 	url = git@github.com:dpronin/memcpy.git
@@ -13,3 +10,6 @@
 [submodule "gparser"]
 	path = gparser
 	url = git@github.com:dpronin/gparser.git
+[submodule "beautiful-number"]
+	path = beautiful-number
+	url = git@github.com:dpronin/beautiful-number.git
