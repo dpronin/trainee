@@ -10,7 +10,25 @@
 
 #include <cstddef>
 
+#include <iostream>
+
+#ifdef __clang__
 #include <print>
+#else
+#include <format>
+#include <ostream>
+
+namespace std {
+
+template <typename... Args>
+void println(std::ostream &os, std::format_string<Args...> fmt,
+             Args &&...args) {
+  os << std::format(fmt, std::forward<Args>(args)...) << '\n';
+}
+
+} // namespace std
+
+#endif
 
 template <typename T, size_t Align>
 #ifdef __clang__
@@ -44,7 +62,7 @@ int main(int argc, char const *argv[]) {
   int *ju = &reinterpret_cast<int &>(j);
   *ju = 13;
 
-  std::println("{} {}", *iu, *ju);
+  std::println(std::cout, "{} {}", *iu, *ju);
 
   return 0;
 }
