@@ -1,7 +1,27 @@
+#include <iostream>
 #include <limits>
-#include <print>
 #include <unordered_set>
 #include <vector>
+
+#ifdef __clang__
+#include <print>
+#else
+#include <format>
+#include <ostream>
+
+namespace std {
+
+template <typename... Args>
+void println(std::ostream &os, std::format_string<Args...> fmt,
+             Args &&...args) {
+  os << std::format(fmt, std::forward<Args>(args)...) << '\n';
+}
+
+} // namespace std
+
+#endif
+
+namespace {
 
 struct neigh {
   int id;
@@ -48,6 +68,8 @@ void deykstra(graph_t const &graph, costs_t &costs, parents_t &parents) {
   }
 }
 
+} // namespace
+
 int main(int argc, char const *argv[]) {
   graph_t graph;
 
@@ -67,12 +89,12 @@ int main(int argc, char const *argv[]) {
   deykstra(graph, costs, parents);
 
   for (int i = 0; i < parents.size(); ++i)
-    std::println("{} -> {}", i, parents[i]);
-  std::println("");
+    std::println(std::cout, "{} -> {}", parents[i], i);
+  std::println(std::cout, "");
 
-  for (int i = 0; i < parents.size(); ++i)
-    std::println("{} -> {}", i, costs[i]);
-  std::println("");
+  for (int i = 0; i < costs.size(); ++i)
+    std::println(std::cout, "{}: {}", i, costs[i]);
+  std::println(std::cout, "");
 
   return 0;
 }
