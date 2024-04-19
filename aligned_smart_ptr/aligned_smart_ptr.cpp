@@ -1,110 +1,110 @@
+#include <cerrno>
 #include <cstdlib>
 
+#include <algorithm>
 #include <exception>
 #include <iostream>
 #include <limits>
 #include <memory>
 #include <new>
-#include <print>
 #include <ranges>
+#include <stdexcept>
+#include <system_error>
 #include <typeinfo>
 #include <vector>
 
+#ifdef __clang__
+#include <print>
+#else
+#include <format>
+#endif
+
 #include <unistd.h>
 
-template <typename T, size_t Alignment = alignof(T)> class Allocator {
-public:
-  static_assert(0 == (Alignment & (Alignment - 1)),
-                "Alignment must be a power of 2");
-  static_assert(alignof(T) <= Alignment,
-                "Alignment must be at least alignof(T)");
-  template <class U> struct rebind {
-    using other = Allocator<U, Alignment /*std::max(alignof(U), Alignment)*/>;
-  };
+#ifndef __clang__
 
+namespace std {
+
+template <typename... Args>
+void println(std::ostream &os, std::format_string<Args...> fmt,
+             Args &&...args) {
+  os << std::format(fmt, std::forward<Args>(args)...) << '\n';
+}
+
+} // namespace std
+
+#endif
+
+template <typename T> class Allocator final {
+public:
   using value_type = T;
 
-  Allocator() = default;
+  explicit Allocator(size_t alignment = alignof(T)) : alignment_(alignment) {
+    if ((alignment_ - 1) & alignment_)
+      throw std::invalid_argument(
+          std::format("{} must be a power of 2", alignment_));
+    if (alignment_ < alignof(T))
+      throw std::invalid_argument(
+          std::format("{} must be at least {}", alignment_, alignof(T)));
+  }
   ~Allocator() = default;
 
-  template <typename U, size_t A>
-  constexpr explicit Allocator(Allocator<U, A> const &other) noexcept {}
+  template <typename U>
+  constexpr explicit Allocator(Allocator<U> const &other)
+      : alignment_(std::max(other.alignment(), alignof(U))) {}
 
   Allocator(Allocator const &other) = default;
   Allocator(Allocator &&other) = default;
 
-  T *allocate(std::size_t n) {
-    std::println("allocate called for {}, required {} bytes {} times",
-                 typeid(T).name(), sizeof(T), n);
+  size_t alignment() const { return alignment_; }
 
-    if (n > std::numeric_limits<std::size_t>::max() / sizeof(T))
+  T *allocate(size_t n) {
+    std::println(
+        std::cout,
+        "allocate called for {}, required {} bytes {} times, alignment {:#x}",
+        typeid(T).name(), sizeof(T), n, alignment_);
+
+    if (n > std::numeric_limits<size_t>::max() / sizeof(T))
       throw std::bad_array_new_length();
 
-    if (auto *p = static_cast<T *>(aligned_alloc(Alignment, sizeof(T) * n)))
+    if (auto *p = static_cast<T *>(aligned_alloc(alignment_, sizeof(T) * n)))
       return p;
 
     throw std::bad_alloc();
   }
 
-  void deallocate(T *p, std::size_t n) noexcept { std::free(p); }
-};
+  void deallocate(T *p, size_t n) noexcept { std::free(p); }
 
-template <typename T = void> class PageAlignedAllocator {
-public:
-  template <typename U> struct rebind {
-    using other = PageAlignedAllocator<U>;
-  };
-
-  using value_type = T;
-
-  constexpr PageAlignedAllocator() = default;
-  ~PageAlignedAllocator() = default;
-
-  template <typename U>
-  constexpr explicit PageAlignedAllocator(
-      PageAlignedAllocator<U> const &other) noexcept {}
-
-  PageAlignedAllocator(PageAlignedAllocator<T> const &other) = default;
-  PageAlignedAllocator(PageAlignedAllocator<T> &&other) = default;
-
-  T *allocate(std::size_t n) {
-    std::println("allocate called for {}, required {} bytes {} times",
-                 typeid(T).name(), sizeof(T), n);
-
-    if (n > std::numeric_limits<std::size_t>::max() / sizeof(T))
-      throw std::bad_array_new_length();
-
-    if (auto const page_sz = getpagesize(); page_sz > 0) {
-      if (auto *p =
-              static_cast<T *>(std::aligned_alloc(page_sz, sizeof(T) * n)))
-        return p;
-    }
-
-    throw std::bad_alloc();
-  }
-
-  void deallocate(T *p, std::size_t n) noexcept { std::free(p); }
+private:
+  size_t alignment_;
 };
 
 int main(int argc, char const *argv[]) try {
   std::vector<std::shared_ptr<int>> v;
 
-  Allocator<int, 1 << 28> a1{};
-  for (auto const i : std::views::iota(0, 1 << 4)) {
+  for (auto a1{Allocator<int>{1 << 28}};
+       auto const i : std::views::iota(0, 1 << 4)) {
     v.push_back(std::allocate_shared<int>(a1, i));
-    std::println("{}", static_cast<void *>(v.back().get()));
+    std::println(std::cout, "{}", static_cast<void *>(v.back().get()));
   }
 
   v.clear();
 
-  PageAlignedAllocator<> a2{};
-  for (auto const i : std::views::iota(0, 1 << 4)) {
+  auto const page_size{getpagesize()};
+  if (page_size < 0)
+    throw std::system_error{errno, std::generic_category()};
+
+  for (auto a2{Allocator<int>{static_cast<size_t>(page_size)}};
+       auto const i : std::views::iota(0, 1 << 4)) {
     v.push_back(std::allocate_shared<int>(a2, i));
-    std::println("{}", static_cast<void *>(v.back().get()));
+    std::println(std::cout, "{}", static_cast<void *>(v.back().get()));
   }
 
   return 0;
 } catch (std::exception const &ex) {
-  std::cerr << ex.what() << std::endl;
+  std::println(std::cerr, "{}", ex.what());
+  return 1;
+} catch (...) {
+  std::println(std::cerr, "unknown exception occurred");
   return 1;
 }
