@@ -58,7 +58,7 @@ public:
 
   size_t alignment() const { return alignment_; }
 
-  T *allocate(size_t n) {
+  [[nodiscard]] T *allocate(size_t n) {
     std::println(
         std::cout,
         "allocate called for {}, required {} bytes {} times, alignment {:#x}",
