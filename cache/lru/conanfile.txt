@@ -1,0 +1,9 @@
+[test_requires]
+gtest/[~1.14]
+
+[generators]
+CMakeDeps
+CMakeToolchain
+
+[layout]
+cmake_layout
