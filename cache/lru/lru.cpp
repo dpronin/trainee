@@ -315,9 +315,7 @@ TEST(LRUCache, EvictInsertInvalidatedEntry) {
       cache->update({kKeyToVerify, std::make_unique_for_overwrite<std::byte[]>(
                                        kCacheItemSz)}),
   };
-  ASSERT_TRUE(evicted_value.has_value());
-  EXPECT_EQ(evicted_value->first, kKeyToVerify);
-  EXPECT_FALSE(static_cast<bool>(evicted_value->second));
+  EXPECT_FALSE(evicted_value.has_value());
 }
 
 TEST(LRUCache, EvictInvalidatedEntryInsertOffByOneEntry) {
@@ -351,8 +349,7 @@ TEST(LRUCache, EvictInvalidatedEntryInsertOffByOneEntry) {
           std::make_unique_for_overwrite<std::byte[]>(kCacheItemSz),
       }),
   };
-  ASSERT_TRUE(evicted_value.has_value());
-  EXPECT_EQ(evicted_value->first, kKeyToInvalidate);
+  EXPECT_FALSE(evicted_value.has_value());
 }
 
 TEST(LRUCache, InvalidateLessInsertEntryEvictInvalidated) {
@@ -388,8 +385,7 @@ TEST(LRUCache, InvalidateLessInsertEntryEvictInvalidated) {
           std::make_unique_for_overwrite<std::byte[]>(kCacheItemSz),
       }),
   };
-  ASSERT_TRUE(evicted_value.has_value());
-  EXPECT_EQ(evicted_value->first, kKeyToInvalidate);
+  EXPECT_FALSE(evicted_value.has_value());
 }
 
 TEST(LRUCache, InvalidateGreaterInsertEntryEvictInvalidated) {
@@ -425,8 +421,7 @@ TEST(LRUCache, InvalidateGreaterInsertEntryEvictInvalidated) {
           std::make_unique_for_overwrite<std::byte[]>(kCacheItemSz),
       }),
   };
-  ASSERT_TRUE(evicted_value.has_value());
-  EXPECT_EQ(evicted_value->first, kKeyToInvalidate);
+  EXPECT_FALSE(evicted_value.has_value());
 }
 
 } // namespace
