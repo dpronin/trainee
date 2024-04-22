@@ -13,12 +13,11 @@
 #include <vector>
 
 #include "flat_lru.hpp"
+#include "generic_lru.hpp"
 
 using namespace testing;
 
 namespace {
-
-using cache = flat_lru<uint64_t, std::byte>;
 
 template <typename T>
 concept is_trivially_copyable = std::is_trivially_copyable_v<T>;
@@ -47,25 +46,31 @@ inline auto duplicate_unique(std::unique_ptr<T[]> const &p, size_t sz) {
   return p_dup;
 }
 
-TEST(LRUCache, CreateValid) {
+template <typename T> class LRUCache : public testing::Test {};
+
+using LRUCacheImpls =
+    Types<flat_lru<uint64_t, std::byte>, generic_lru<uint64_t, std::byte>>;
+TYPED_TEST_SUITE(LRUCache, LRUCacheImpls);
+
+TYPED_TEST(LRUCache, CreateValid) {
   constexpr auto kCacheLenMax{1uz};
   constexpr auto kCacheItemSz{1uz};
 
-  auto cache_not_null{cache::create(kCacheLenMax, kCacheItemSz)};
+  auto cache_not_null{TypeParam::create(kCacheLenMax, kCacheItemSz)};
   ASSERT_TRUE(cache_not_null);
 
   EXPECT_EQ(cache_not_null->len_max(), kCacheLenMax);
   EXPECT_EQ(cache_not_null->item_sz(), kCacheItemSz);
 }
 
-TEST(LRUCache, CreateInvalid) {
+TYPED_TEST(LRUCache, CreateInvalid) {
   constexpr auto kCacheLenMax{1uz};
   constexpr auto kCacheItemSz{1uz};
 
   auto cache_nulls{
       std::array{
-          cache::create(0uz, kCacheItemSz),
-          cache::create(kCacheLenMax, 0uz),
+          TypeParam::create(0uz, kCacheItemSz),
+          TypeParam::create(kCacheLenMax, 0uz),
       },
   };
 
@@ -73,11 +78,11 @@ TEST(LRUCache, CreateInvalid) {
     EXPECT_FALSE(cache_null);
 }
 
-TEST(LRUCache, InsertAndFindNonExistent) {
+TYPED_TEST(LRUCache, InsertAndFindNonExistent) {
   constexpr auto kCacheLenMax{32uz};
   constexpr auto kCacheItemSz{1u};
 
-  auto cache{cache::create(kCacheLenMax, kCacheItemSz)};
+  auto cache{TypeParam::create(kCacheLenMax, kCacheItemSz)};
   ASSERT_TRUE(cache);
 
   for (auto key : std::views::iota(0uz, kCacheLenMax))
@@ -99,11 +104,11 @@ TEST(LRUCache, InsertAndFindNonExistent) {
   }
 }
 
-TEST(LRUCache, InsertAndFind) {
+TYPED_TEST(LRUCache, InsertAndFind) {
   constexpr auto kCacheLenMax{32uz};
   constexpr auto kCacheItemSz{16uz};
 
-  auto cache{cache::create(kCacheLenMax, kCacheItemSz)};
+  auto cache{TypeParam::create(kCacheLenMax, kCacheItemSz)};
   ASSERT_TRUE(cache);
 
   auto bufs_pairs{
@@ -140,11 +145,11 @@ TEST(LRUCache, InsertAndFind) {
   }
 }
 
-TEST(LRUCache, FindMutableAndCheckMutation) {
+TYPED_TEST(LRUCache, FindMutableAndCheckMutation) {
   constexpr auto kCacheLenMax{32uz};
   constexpr auto kCacheItemSz{16uz};
 
-  auto cache{cache::create(kCacheLenMax, kCacheItemSz)};
+  auto cache{TypeParam::create(kCacheLenMax, kCacheItemSz)};
   ASSERT_TRUE(cache);
 
   auto bufs_pairs{
@@ -188,11 +193,11 @@ TEST(LRUCache, FindMutableAndCheckMutation) {
   }
 }
 
-TEST(LRUCache, Invalidate) {
+TYPED_TEST(LRUCache, Invalidate) {
   constexpr auto kCacheLenMax{32uz};
   constexpr auto kCacheItemSz{1uz};
 
-  auto cache{cache::create(kCacheLenMax, kCacheItemSz)};
+  auto cache{TypeParam::create(kCacheLenMax, kCacheItemSz)};
   ASSERT_TRUE(cache);
 
   auto bufs_pairs{
@@ -229,11 +234,11 @@ TEST(LRUCache, Invalidate) {
   }
 }
 
-TEST(LRUCache, InvalidateRange) {
+TYPED_TEST(LRUCache, InvalidateRange) {
   constexpr auto kCacheLenMax{32uz};
   constexpr auto kCacheItemSz{1uz};
 
-  auto cache{cache::create(kCacheLenMax, kCacheItemSz)};
+  auto cache{TypeParam::create(kCacheLenMax, kCacheItemSz)};
   ASSERT_TRUE(cache);
 
   auto bufs_pairs{
@@ -264,11 +269,11 @@ TEST(LRUCache, InvalidateRange) {
   }
 }
 
-TEST(LRUCache, EvictValidEntriesInOrder) {
+TYPED_TEST(LRUCache, EvictValidEntriesInOrder) {
   constexpr auto kCacheLenMax{32uz};
   constexpr auto kCacheItemSz{1uz};
 
-  auto cache{cache::create(kCacheLenMax, kCacheItemSz)};
+  auto cache{TypeParam::create(kCacheLenMax, kCacheItemSz)};
   ASSERT_TRUE(cache);
 
   for (auto key : std::views::iota(0uz, kCacheLenMax)) {
@@ -289,13 +294,13 @@ TEST(LRUCache, EvictValidEntriesInOrder) {
   }
 }
 
-TEST(LRUCache, EvictInsertInvalidatedEntry) {
+TYPED_TEST(LRUCache, EvictInsertInvalidatedEntry) {
   constexpr auto kCacheLenMax{8uz};
   constexpr auto kCacheItemSz{1uz};
   constexpr auto kKeyToVerify{6uz};
   static_assert(kKeyToVerify < kCacheLenMax);
 
-  auto cache{cache::create(kCacheLenMax, kCacheItemSz)};
+  auto cache{TypeParam::create(kCacheLenMax, kCacheItemSz)};
   ASSERT_TRUE(cache);
 
   for (auto key : std::views::iota(0uz, kCacheLenMax)) {
@@ -318,7 +323,7 @@ TEST(LRUCache, EvictInsertInvalidatedEntry) {
   EXPECT_FALSE(evicted_value.has_value());
 }
 
-TEST(LRUCache, EvictInvalidatedEntryInsertOffByOneEntry) {
+TYPED_TEST(LRUCache, EvictInvalidatedEntryInsertOffByOneEntry) {
   constexpr auto kCacheLenMax{8uz};
   constexpr auto kCacheItemSz{1uz};
   constexpr auto kKeyToInvalidate{6uz};
@@ -327,7 +332,7 @@ TEST(LRUCache, EvictInvalidatedEntryInsertOffByOneEntry) {
   static_assert(kKeyStride > 1uz,
                 "key stride must not be 1, there must be a gap in between");
 
-  auto cache{cache::create(kCacheLenMax, kCacheItemSz)};
+  auto cache{TypeParam::create(kCacheLenMax, kCacheItemSz)};
   ASSERT_TRUE(cache);
 
   for (auto key : std::views::iota(0uz, kCacheLenMax)) {
@@ -352,7 +357,7 @@ TEST(LRUCache, EvictInvalidatedEntryInsertOffByOneEntry) {
   EXPECT_FALSE(evicted_value.has_value());
 }
 
-TEST(LRUCache, InvalidateLessInsertEntryEvictInvalidated) {
+TYPED_TEST(LRUCache, InvalidateLessInsertEntryEvictInvalidated) {
   constexpr auto kCacheLenMax{16uz};
   constexpr auto kCacheItemSz{1uz};
   constexpr auto kKeyToInsert{7uz};
@@ -363,7 +368,7 @@ TEST(LRUCache, InvalidateLessInsertEntryEvictInvalidated) {
   constexpr auto kKeyStride{2uz};
   static_assert(0 == (kKeyStride % 2), "key stride must be even");
 
-  auto cache{cache::create(kCacheLenMax, kCacheItemSz)};
+  auto cache{TypeParam::create(kCacheLenMax, kCacheItemSz)};
   ASSERT_TRUE(cache);
 
   for (auto key : std::views::iota(0uz, kCacheLenMax)) {
@@ -388,7 +393,7 @@ TEST(LRUCache, InvalidateLessInsertEntryEvictInvalidated) {
   EXPECT_FALSE(evicted_value.has_value());
 }
 
-TEST(LRUCache, InvalidateGreaterInsertEntryEvictInvalidated) {
+TYPED_TEST(LRUCache, InvalidateGreaterInsertEntryEvictInvalidated) {
   constexpr auto kCacheLenMax{16uz};
   constexpr auto kCacheItemSz{1uz};
   constexpr auto kKeyToInsert{7uz};
@@ -399,7 +404,7 @@ TEST(LRUCache, InvalidateGreaterInsertEntryEvictInvalidated) {
   constexpr auto kKeyStride{2uz};
   static_assert(0 == (kKeyStride % 2), "key stride must be even");
 
-  auto cache{cache::create(kCacheLenMax, kCacheItemSz)};
+  auto cache{TypeParam::create(kCacheLenMax, kCacheItemSz)};
   ASSERT_TRUE(cache);
 
   for (auto key : std::views::iota(0uz, kCacheLenMax)) {
