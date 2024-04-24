@@ -1,19 +1,24 @@
 cmake_minimum_required(VERSION 3.12 FATAL_ERROR)
 
-project(lru VERSION 0.1.0 LANGUAGES CXX)
+project(cache_lru VERSION 0.1.0 LANGUAGES CXX)
 
-add_library(flat_lru INTERFACE
+add_library(${PROJECT_NAME} INTERFACE
     flat_lru.hpp
+    generic_lru.hpp
 )
-add_library(lru::cache ALIAS flat_lru)
+target_include_directories(${PROJECT_NAME} INTERFACE
+    ${CMAKE_CURRENT_LIST_DIR}
+)
+
+add_library(cache::lru ALIAS cache_lru)
 
 find_package(GTest CONFIG REQUIRED)
 
-add_executable(${PROJECT_NAME}
-    lru.cpp
+add_executable(ut
+    ut.cpp
 )
-target_compile_features(${PROJECT_NAME} PRIVATE cxx_std_23)
-target_link_libraries(${PROJECT_NAME} PRIVATE
-    lru::cache
+target_compile_features(ut PRIVATE cxx_std_23)
+target_link_libraries(ut PRIVATE
+    cache::lru
     gtest::gtest
 )
