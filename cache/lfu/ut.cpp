@@ -172,7 +172,7 @@ TYPED_TEST(LFUCache, InvalidateRange) {
   }
 
   for (auto key : kvs_pairs | std::views::keys)
-    EXPECT_TRUE(cache->exists(key));
+    ASSERT_TRUE(cache->exists(key));
 
   cache->invalidate_range({0uz, kvs_pairs.size()});
 
@@ -189,13 +189,15 @@ TYPED_TEST(LFUCache, EvictValidEntriesInOrder) {
   auto cache{TypeParam::create(kCacheLenMax)};
   ASSERT_TRUE(cache);
 
+  auto rd{std::random_device{}};
+
   for (auto key : std::views::iota(0uz, kCacheLenMax)) {
-    auto const evicted_value{cache->put({key, key + kCacheLenMax})};
+    auto const evicted_value{cache->put({key, rd()})};
     ASSERT_FALSE(evicted_value.has_value());
   }
 
   for (auto key : std::views::iota(kCacheLenMax, 2 * kCacheLenMax)) {
-    auto const evicted_value{cache->put({key, key + kCacheLenMax})};
+    auto const evicted_value{cache->put({key, rd()})};
     ASSERT_TRUE(evicted_value.has_value());
     EXPECT_EQ(evicted_value->first, key - kCacheLenMax);
   }
@@ -209,17 +211,17 @@ TYPED_TEST(LFUCache, EvictInsertInvalidatedEntry) {
   auto cache{TypeParam::create(kCacheLenMax)};
   ASSERT_TRUE(cache);
 
+  auto rd{std::random_device{}};
+
   for (auto key : std::views::iota(0uz, kCacheLenMax)) {
-    auto const evicted_value{cache->put({key, key + kCacheLenMax})};
+    auto const evicted_value{cache->put({key, rd()})};
     ASSERT_FALSE(evicted_value.has_value());
   }
 
   cache->invalidate(kKeyToVerify);
   ASSERT_FALSE(cache->exists(kKeyToVerify));
 
-  auto const evicted_value{
-      cache->put({kKeyToVerify, std::random_device{}()}),
-  };
+  auto const evicted_value{cache->put({kKeyToVerify, rd()})};
   EXPECT_FALSE(evicted_value.has_value());
 }
 
@@ -234,25 +236,17 @@ TYPED_TEST(LFUCache, EvictInvalidatedEntryInsertOffByOneEntry) {
   auto cache{TypeParam::create(kCacheLenMax)};
   ASSERT_TRUE(cache);
 
+  auto rd{std::random_device{}};
+
   for (auto key : std::views::iota(0uz, kCacheLenMax)) {
-    auto const evicted_value{
-        cache->put({
-            kKeyStride * key,
-            kKeyStride * (kCacheLenMax - key - 1),
-        }),
-    };
+    auto const evicted_value{cache->put({kKeyStride * key, rd()})};
     ASSERT_FALSE(evicted_value.has_value());
   }
 
   cache->invalidate(kKeyToInvalidate);
   ASSERT_FALSE(cache->exists(kKeyToInvalidate));
 
-  auto const evicted_value{
-      cache->put({
-          kKeyToInvalidate - 1,
-          kKeyStride * (kCacheLenMax - kKeyToInvalidate - 1),
-      }),
-  };
+  auto const evicted_value{cache->put({kKeyToInvalidate - 1, rd()})};
   EXPECT_FALSE(evicted_value.has_value());
 }
 
@@ -269,25 +263,17 @@ TYPED_TEST(LFUCache, InvalidateLessInsertEntryEvictInvalidated) {
   auto cache{TypeParam::create(kCacheLenMax)};
   ASSERT_TRUE(cache);
 
+  auto rd{std::random_device{}};
+
   for (auto key : std::views::iota(0uz, kCacheLenMax)) {
-    auto const evicted_value{
-        cache->put({
-            kKeyStride * key,
-            kKeyStride * (kCacheLenMax - key - 1),
-        }),
-    };
+    auto const evicted_value{cache->put({kKeyStride * key, rd()})};
     ASSERT_FALSE(evicted_value.has_value());
   }
 
   cache->invalidate(kKeyToInvalidate);
   ASSERT_FALSE(cache->exists(kKeyToInvalidate));
 
-  auto const evicted_value{
-      cache->put({
-          kKeyToInsert,
-          kKeyStride * (kCacheLenMax - kKeyToInsert - 1),
-      }),
-  };
+  auto const evicted_value{cache->put({kKeyToInsert, rd()})};
   EXPECT_FALSE(evicted_value.has_value());
 }
 
@@ -304,25 +290,17 @@ TYPED_TEST(LFUCache, InvalidateGreaterInsertEntryEvictInvalidated) {
   auto cache{TypeParam::create(kCacheLenMax)};
   ASSERT_TRUE(cache);
 
+  auto rd{std::random_device{}};
+
   for (auto key : std::views::iota(0uz, kCacheLenMax)) {
-    auto const evicted_value{
-        cache->put({
-            kKeyStride * key,
-            kKeyStride * (kCacheLenMax - key - 1),
-        }),
-    };
+    auto const evicted_value{cache->put({kKeyStride * key, rd()})};
     ASSERT_FALSE(evicted_value.has_value());
   }
 
   cache->invalidate(kKeyToInvalidate);
   ASSERT_FALSE(cache->exists(kKeyToInvalidate));
 
-  auto const evicted_value{
-      cache->put({
-          kKeyToInsert,
-          kKeyStride * (kCacheLenMax - kKeyToInsert - 1),
-      }),
-  };
+  auto const evicted_value{cache->put({kKeyToInsert, rd()})};
   EXPECT_FALSE(evicted_value.has_value());
 }
 
