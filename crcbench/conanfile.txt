@@ -1,0 +1,9 @@
+[test_requires]
+benchmark/[~1.8]
+
+[generators]
+CMakeToolchain
+CMakeDeps
+
+[layout]
+cmake_layout
