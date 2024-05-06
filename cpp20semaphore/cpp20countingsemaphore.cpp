@@ -32,14 +32,14 @@ template <typename T, size_t Align = alignof(T)>
 using aligned_storage_t = typename aligned_storage<T, Align>::type;
 
 #ifdef __cpp_lib_hardware_interference_size
-constexpr size_t hardware_constructive_interference_size =
-    std::hardware_constructive_interference_size;
+constexpr size_t hardware_destructive_interference_size =
+    std::hardware_destructive_interference_size;
 #else
-constexpr size_t hardware_constructive_interference_size = 64;
+constexpr size_t hardware_destructive_interference_size = 64;
 #endif
 
 using int_cache_line_aligned =
-    aligned_storage_t<int, hardware_constructive_interference_size>;
+    aligned_storage_t<int, hardware_destructive_interference_size>;
 
 struct thread_shared_info {
   thread_shared_info() {
