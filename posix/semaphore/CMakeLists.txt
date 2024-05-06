@@ -1,8 +1,10 @@
 cmake_minimum_required(VERSION 3.12 FATAL_ERROR)
 
-project(interthreadbinarysemaphore VERSION 0.1.0 LANGUAGES CXX)
+project(posixsemaphore VERSION 0.1.0 LANGUAGES CXX)
 
-add_executable(${PROJECT_NAME}
-    ${PROJECT_NAME}.cpp
-)
-target_compile_features(${PROJECT_NAME} PRIVATE cxx_std_20)
+foreach(exe_name interthreadbinarysemaphore interprocessbinarysemaphore)
+    add_executable(${exe_name}
+        ${exe_name}.cpp
+    )
+    target_compile_features(${exe_name} PRIVATE cxx_std_20)
+endforeach()
