@@ -26,14 +26,14 @@ public:
 
   [[nodiscard]] static constexpr uint32_t capacity() noexcept { return N; }
 
-  [[nodiscard]] T front() const noexcept { return item[head_]; }
+  [[nodiscard]] T const &front() const noexcept { return item[head_]; }
 
   void pop() noexcept {
     head_ = (head_ + 1) % N;
     --size_;
   }
 
-  void push(uint32_t v) noexcept {
+  void push(T const &v) noexcept {
     item[tail_] = v;
     tail_ = (tail_ + 1) % N;
     ++size_;
