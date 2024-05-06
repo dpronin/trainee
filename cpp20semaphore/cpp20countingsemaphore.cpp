@@ -2,6 +2,7 @@
 #include <cstddef>
 
 #include <iostream>
+#include <limits>
 #include <mutex>
 #include <new>
 #include <numeric>
@@ -41,47 +42,56 @@ constexpr size_t hardware_destructive_interference_size = 64;
 using int_cache_line_aligned =
     aligned_storage_t<int, hardware_destructive_interference_size>;
 
+template <ptrdiff_t LeastMaxValue = std::numeric_limits<ptrdiff_t>::max()>
+class semaphore {
+  std::counting_semaphore<LeastMaxValue> s_{LeastMaxValue};
+
+public:
+  semaphore() = default;
+  semaphore(semaphore const &) = delete;
+
+  void lock() { s_.acquire(); }
+  bool try_lock() { return s_.try_acquire(); }
+  void unlock() { s_.release(); }
+};
+
 struct thread_shared_info {
   thread_shared_info() {
     for (auto &i : v)
-      items_pool.push(&i);
+      items_pool.push(&reinterpret_cast<int &>(i));
   }
 
-  std::counting_semaphore<kConcurrencyLevelMax> sem{kConcurrencyLevelMax};
+  semaphore<kConcurrencyLevelMax> sem;
   std::vector<int_cache_line_aligned> v{kConcurrencyLevelMax};
 
   std::mutex items_pool_lock;
-  std::stack<typename decltype(v)::pointer> items_pool;
+  std::stack<int *> items_pool;
 };
 
 void worker(thread_shared_info &shared_data) {
-  shared_data.sem.acquire();
+  std::lock_guard lgs{shared_data.sem};
 
-  std::unique_lock l{shared_data.items_pool_lock};
+  std::unique_lock ulm{shared_data.items_pool_lock};
 
   std::cout << "Thread started ..." << std::endl;
 
   assert(!shared_data.items_pool.empty());
 
-  auto *p{shared_data.items_pool.top()};
+  auto *p_cnt{shared_data.items_pool.top()};
   shared_data.items_pool.pop();
 
-  l.unlock();
+  ulm.unlock();
 
-  for (auto &i{reinterpret_cast<int &>(*p)};
-       auto _ : std::views::iota(0u, kPerThreadCount)) {
-    ++i;
-  }
+  for (auto _ : std::views::iota(0u, kPerThreadCount))
+    ++(*p_cnt);
 
-  l.lock();
+  ulm.lock();
 
-  shared_data.items_pool.push(p);
+  shared_data.items_pool.push(p_cnt);
 
   std::cout << "Thread finished ..." << std::endl;
 
-  l.unlock();
-
-  shared_data.sem.release();
+  ulm.unlock();
 }
 
 int main(int argc, char const *argv[]) {
