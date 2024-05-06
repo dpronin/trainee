@@ -13,12 +13,12 @@
 
 constexpr auto kPerProcessCount{100000000u};
 
-struct thread_shared_info {
+struct process_shared_info {
   sem_t sem;
   int cnt;
 };
 
-[[noreturn]] void worker(thread_shared_info &shared_data) {
+[[noreturn]] void worker(process_shared_info &shared_data) {
   sem_wait(&shared_data.sem);
   std::cout << "Process started ..." << std::endl;
   for (auto _ : std::views::iota(0u, kPerProcessCount))
@@ -30,12 +30,12 @@ struct thread_shared_info {
 
 int main(int argc, char const *argv[]) {
   auto *shared_data_mem{
-      mmap(nullptr, sizeof(thread_shared_info), PROT_READ | PROT_WRITE,
+      mmap(nullptr, sizeof(process_shared_info), PROT_READ | PROT_WRITE,
            MAP_ANONYMOUS | MAP_SHARED, -1, 0),
   };
   assert(shared_data_mem != MAP_FAILED);
 
-  auto *shared_data{new (shared_data_mem) thread_shared_info{}};
+  auto *shared_data{new (shared_data_mem) process_shared_info{}};
 
   [[maybe_unused]] auto const r{sem_init(&shared_data->sem, 1, 1)};
   assert(0 == r);
@@ -59,9 +59,9 @@ int main(int argc, char const *argv[]) {
 
   assert(shared_data->cnt == kPerProcessCount * children.size());
 
-  shared_data->~thread_shared_info();
+  shared_data->~process_shared_info();
 
-  munmap(shared_data_mem, sizeof(thread_shared_info));
+  munmap(shared_data_mem, sizeof(process_shared_info));
 
   return 0;
 }
