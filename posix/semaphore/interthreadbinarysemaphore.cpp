@@ -14,7 +14,7 @@ struct thread_shared_info {
   int cnt;
 };
 
-void f(thread_shared_info &info) {
+void worker(thread_shared_info &info) {
   sem_wait(&info.sem);
   std::cout << "Thread started ..." << std::endl;
   for (auto _ : std::views::iota(0u, kPerThreadCount))
@@ -31,7 +31,7 @@ int main(int argc, char const *argv[]) {
 
   auto vths{std::vector<std::thread>{std::thread::hardware_concurrency()}};
   for (auto &vth : vths)
-    vth = std::thread{f, std::ref(shared_data)};
+    vth = std::thread{worker, std::ref(shared_data)};
 
   for (auto &vth : vths)
     vth.join();
