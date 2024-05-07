@@ -12,6 +12,7 @@
 #include <chrono>
 #include <iostream>
 #include <memory>
+#include <new>
 #include <optional>
 #include <ranges>
 #include <thread>
@@ -19,9 +20,16 @@
 #include <vector>
 
 template <typename T>
-concept trivial = std::is_trivial_v<T>;
+concept standard_layout = std::is_standard_layout_v<T>;
 
-template <trivial T, size_t N> class communication_lockless_spmc_queue {
+#ifdef __cpp_lib_hardware_interference_size
+constexpr size_t hardware_destructive_interference_size{
+    std::hardware_destructive_interference_size};
+#else
+constexpr size_t hardware_destructive_interference_size{64};
+#endif
+
+template <standard_layout T, size_t N> class communication_lockless_spmc_queue {
 public:
   communication_lockless_spmc_queue() = default;
   ~communication_lockless_spmc_queue() = default;
@@ -32,9 +40,9 @@ public:
                                   std::is_nothrow_destructible_v<T>) {
     std::optional<T> v;
 
-    auto ph = __atomic_load_n(&head_, __ATOMIC_RELAXED);
+    auto ph{__atomic_load_n(&head_, __ATOMIC_RELAXED)};
     do {
-      if (auto const pt = __atomic_load_n(&tail_, __ATOMIC_RELAXED); pt == ph)
+      if (auto const pt{__atomic_load_n(&tail_, __ATOMIC_RELAXED)}; pt == ph)
           [[unlikely]] {
 
         v.reset();
@@ -48,8 +56,8 @@ public:
   }
 
   bool push(T const &v) noexcept(std::is_nothrow_copy_constructible_v<T>) {
-    auto const ntail = (tail_ + 1) % N;
-    if (ntail == __atomic_load_n(&head_, __ATOMIC_RELAXED))
+    auto const ntail{(tail_ + 1) % N};
+    if (ntail == __atomic_load_n(&head_, __ATOMIC_RELAXED)) [[unlikely]]
       return false;
     items_[tail_] = v;
     __atomic_store_n(&tail_, ntail, __ATOMIC_RELEASE);
@@ -57,54 +65,79 @@ public:
   }
 
 private:
-  uint32_t head_;
-  uint32_t tail_;
-  T items_[N];
+  alignas(hardware_destructive_interference_size) uint32_t head_;
+  alignas(hardware_destructive_interference_size) uint32_t tail_;
+  alignas(hardware_destructive_interference_size) T items_[N];
 };
 
 using communication_lockless_spmc_queue_t =
-    communication_lockless_spmc_queue<uint32_t, 5u>;
+    communication_lockless_spmc_queue<std::pair<int, int>, 5u>;
 
 struct process_shared_data {
   communication_lockless_spmc_queue_t q;
 };
-static_assert(std::is_standard_layout_v<process_shared_data>,
+static_assert(standard_layout<process_shared_data>,
               "process_shared_data must be standard layout");
 
-constexpr size_t kConsumerIterationsCount = 10;
+constexpr size_t kConsumerIterationsCount{10};
 
 [[noreturn]] void consumer(process_shared_data &info, size_t count) {
-  using namespace std::chrono_literals;
+  using std::chrono_literals::operator""ms;
+
+  auto logln{
+      [](auto &&...args) {
+        std::cout << std::format("{} (consumer): ", getpid());
+        (std::cout << ... << args) << std::endl;
+      },
+  };
+
   srand(getpid());
-  auto &q = info.q;
-  for (int i = 0; i < count;) {
-    std::cout << getpid() << " (consumer): is working" << std::endl;
+
+  for (auto &q{info.q}; count > 0;) {
+    logln("working...");
+
     if (auto v = q.pop()) [[likely]] {
-      std::cout << getpid() << " (consumer): processing " << *v << std::endl;
-      ++i;
+      logln("popped v[", v->first, "] = ", v->second);
+      --count;
     }
-    std::cout << getpid() << " (consumer): is sleeping..." << std::endl;
-    std::this_thread::sleep_for(200ms +
-                                std::chrono::milliseconds(rand() % 101));
+
+    auto const sleep_time_ms{100ms + std::chrono::milliseconds(rand() % 51)};
+    logln("sleeping for ", sleep_time_ms.count(), "ms ...");
+    std::this_thread::sleep_for(sleep_time_ms);
   }
-  std::cout << getpid() << " (consumer): finished" << std::endl;
+
+  logln("finished");
+
   _Exit(EXIT_SUCCESS);
 }
 
 void producer(process_shared_data &info, size_t count) {
   using namespace std::chrono_literals;
+
+  auto logln{
+      [](auto &&...args) {
+        std::cout << std::format("{} (producer): ", getpid());
+        (std::cout << ... << args) << std::endl;
+      },
+  };
+
   srand(getpid());
-  auto &q = info.q;
-  for (int i = 0; i < count;) {
-    std::cout << getpid() << " (producer): is working" << std::endl;
-    if (auto const v = /*rand() % 100*/ i; q.push(v)) [[likely]] {
-      std::cout << getpid() << " (producer): pushed " << v << std::endl;
+
+  auto &q{info.q};
+  for (int i{0}; i < count;) {
+    logln("working...");
+
+    if (auto const v{rand() % 100}; q.push({i, v})) [[likely]] {
+      logln("pushed v[", i, "] = ", v);
       ++i;
     }
-    std::cout << getpid() << " (producer): is sleeping..." << std::endl;
-    std::this_thread::sleep_for(100ms);
+
+    auto const sleep_time_ms{20ms};
+    logln("sleeping for ", sleep_time_ms.count(), "ms ...");
+    std::this_thread::sleep_for(sleep_time_ms);
   }
-  std::cout << getpid() << " (producer): finished" << std::endl;
+
+  logln("finished");
 }
 
 /* Run example: ./interprocessspmcqueue 10 */
@@ -145,7 +178,9 @@ int main(int argc, char const *argv[]) {
    */
   for (auto _ : std::views::iota(0ul, strtoul(argv[1], nullptr, 10))) {
     if (auto const child = fork(); 0 == child) {
-      /* We're in a child's body, start doing concurrent fetching from the queue
+      /*
+       * We're in a child's body, start doing concurrent fetching values from
+       * the queue
        */
       children.clear();
       consumer(*p_info, kConsumerIterationsCount);
@@ -163,9 +198,9 @@ int main(int argc, char const *argv[]) {
   /* While there are children we would wait for them all to exit */
   while (!children.empty()) {
     int wstatus{0};
-    auto const child = waitpid(-1, &wstatus, 0);
+    auto const child{waitpid(-1, &wstatus, 0)};
     if (WIFEXITED(wstatus))
-      std::cout << "child " << child << " exited" << std::endl;
+      std::cout << std::format("child {} exited", child) << std::endl;
     std::erase_if(children, [=](auto pid) { return pid == child; });
   }
 
