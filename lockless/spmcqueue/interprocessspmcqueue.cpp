@@ -90,8 +90,8 @@ constexpr size_t kConsumerIterationsCount{10};
 
   auto logln{
       [](auto &&...args) {
-        std::cout << std::format("{} (consumer): ", getpid());
-        (std::cout << ... << args) << std::endl;
+        ((std::cout << std::format("{} (consumer): ", getpid())) << ... << args)
+            << std::endl;
       },
   };
 
@@ -120,8 +120,8 @@ void producer(process_shared_data &info, size_t count) {
 
   auto logln{
       [](auto &&...args) {
-        std::cout << std::format("{} (producer): ", getpid());
-        (std::cout << ... << args) << std::endl;
+        ((std::cout << std::format("{} (producer): ", getpid())) << ... << args)
+            << std::endl;
       },
   };
 
