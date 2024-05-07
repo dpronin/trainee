@@ -116,7 +116,7 @@ constexpr size_t kConsumerIterationsCount{10};
 }
 
 void producer(process_shared_data &info, size_t count) {
-  using namespace std::chrono_literals;
+  using std::chrono_literals::operator""ms;
 
   auto logln{
       [](auto &&...args) {
