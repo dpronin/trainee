@@ -43,7 +43,7 @@ public:
 
     auto ph{__atomic_load_n(&head_, __ATOMIC_RELAXED)};
     do {
-      if (auto const pt{__atomic_load_n(&tail_, __ATOMIC_RELAXED)}; pt == ph)
+      if (auto const pt{__atomic_load_n(&tail_, __ATOMIC_ACQUIRE)}; pt == ph)
           [[unlikely]] {
 
         v.reset();
