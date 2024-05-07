@@ -165,10 +165,12 @@ int main(int argc, char const *argv[]) {
    * Protect the mapping by unique pointer to gracefully unmap the region when
    * exiting the scope for any reason
    */
-  auto process_shared_data_deleter{[](process_shared_data *p_info) {
-    p_info->~process_shared_data();
-    munmap(p_info, sizeof(*p_info));
-  }};
+  auto process_shared_data_deleter{
+      [](process_shared_data *p_info) {
+        p_info->~process_shared_data();
+        munmap(p_info, sizeof(*p_info));
+      },
+  };
   std::unique_ptr<process_shared_data, decltype(process_shared_data_deleter)>
       p_info{
           new (proc_info_raw) process_shared_data{},
