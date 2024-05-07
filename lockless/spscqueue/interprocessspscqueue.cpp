@@ -10,6 +10,7 @@
 #include <unistd.h>
 
 #include <array>
+#include <atomic>
 #include <chrono>
 #include <iostream>
 #include <memory>
@@ -39,33 +40,33 @@ public:
                                   std::is_nothrow_destructible_v<T>) {
     std::optional<T> v;
 
-    if (auto const pt{__atomic_load_n(&tail_, __ATOMIC_ACQUIRE)}; pt != head_)
+    auto const ch{head_.load(std::memory_order_relaxed)};
+    if (auto const ct{tail_.load(std::memory_order_acquire)}; ct != ch)
         [[likely]] {
 
-      v = items_[head_];
-      __atomic_store_n(&head_, (head_ + 1) % items_.size(), __ATOMIC_RELEASE);
+      v = items_[ch];
+      head_.store((ch + 1) % items_.size(), std::memory_order_release);
     }
 
     return v;
   }
 
   bool push(T const &v) noexcept(std::is_nothrow_copy_constructible_v<T>) {
-    auto const nt{(tail_ + 1) % items_.size()};
+    auto const ct{tail_.load(std::memory_order_relaxed)};
 
-    if (auto const ph{__atomic_load_n(&head_, __ATOMIC_RELAXED)}; ph == nt)
-        [[unlikely]] {
+    auto const nt{(ct + 1) % items_.size()};
+    if (nt == head_.load(std::memory_order_relaxed)) [[unlikely]]
       return false;
-    }
 
-    items_[tail_] = v;
-    __atomic_store_n(&tail_, nt, __ATOMIC_RELEASE);
+    items_[ct] = v;
+    tail_.store(nt, std::memory_order_release);
 
     return true;
   }
 
 private:
-  alignas(hardware_destructive_interference_size) uint32_t head_;
-  alignas(hardware_destructive_interference_size) uint32_t tail_;
+  alignas(hardware_destructive_interference_size) std::atomic_uint32_t head_;
+  alignas(hardware_destructive_interference_size) std::atomic_uint32_t tail_;
   alignas(hardware_destructive_interference_size) std::array<T, N + 1> items_;
 };
 
