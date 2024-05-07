@@ -9,6 +9,7 @@
 #include <sys/wait.h>
 #include <unistd.h>
 
+#include <array>
 #include <chrono>
 #include <iostream>
 #include <memory>
@@ -49,14 +50,15 @@ public:
         break;
       }
       v = items_[ph];
-    } while (!__atomic_compare_exchange_n(&head_, &ph, (ph + 1) % N, true,
-                                          __ATOMIC_RELEASE, __ATOMIC_ACQUIRE));
+    } while (!__atomic_compare_exchange_n(&head_, &ph, (ph + 1) % items_.size(),
+                                          true, __ATOMIC_RELEASE,
+                                          __ATOMIC_ACQUIRE));
 
     return v;
   }
 
   bool push(T const &v) noexcept(std::is_nothrow_copy_constructible_v<T>) {
-    auto const nt{(tail_ + 1) % N};
+    auto const nt{(tail_ + 1) % items_.size()};
     if (nt == __atomic_load_n(&head_, __ATOMIC_RELAXED)) [[unlikely]]
       return false;
 
@@ -69,7 +71,7 @@ public:
 private:
   alignas(hardware_destructive_interference_size) uint32_t head_;
   alignas(hardware_destructive_interference_size) uint32_t tail_;
-  alignas(hardware_destructive_interference_size) T items_[N];
+  alignas(hardware_destructive_interference_size) std::array<T, N + 1> items_;
 };
 
 using communication_lockless_spmc_queue_t =
