@@ -182,7 +182,6 @@ int main(int argc, char const *argv[]) {
        * We're in a child's body, start doing concurrent fetching values from
        * the queue
        */
-      children.clear();
       consumer(*p_info, kConsumerIterationsCount);
     } else if (child > 0) {
       /* We're in a parent's body, remember a new child's PID */
