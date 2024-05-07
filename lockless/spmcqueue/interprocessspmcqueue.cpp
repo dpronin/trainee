@@ -56,11 +56,13 @@ public:
   }
 
   bool push(T const &v) noexcept(std::is_nothrow_copy_constructible_v<T>) {
-    auto const ntail{(tail_ + 1) % N};
-    if (ntail == __atomic_load_n(&head_, __ATOMIC_RELAXED)) [[unlikely]]
+    auto const nt{(tail_ + 1) % N};
+    if (nt == __atomic_load_n(&head_, __ATOMIC_RELAXED)) [[unlikely]]
       return false;
+
     items_[tail_] = v;
-    __atomic_store_n(&tail_, ntail, __ATOMIC_RELEASE);
+    __atomic_store_n(&tail_, nt, __ATOMIC_RELEASE);
+
     return true;
   }
 
