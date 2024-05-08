@@ -140,7 +140,7 @@ void producer(process_shared_data &info, size_t count) {
   logln("finished");
 }
 
-/* Run example: ./interprocessspmcqueue */
+/* Run example: ./interprocessspscqueue */
 int main(int argc, char const *argv[]) {
   /*
    * Create a memory mapping where shared data among parent and children
