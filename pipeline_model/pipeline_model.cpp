@@ -90,6 +90,8 @@ void frame_processed(
       break;
     }
   }
+
+  fflush(stdout);
 }
 
 void frame_receive(boost::system::error_code const &ec) {
