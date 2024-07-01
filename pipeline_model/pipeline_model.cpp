@@ -13,8 +13,6 @@
 #include <boost/lexical_cast.hpp>
 #include <boost/system/detail/error_code.hpp>
 
-using std::chrono_literals::operator""s;
-
 namespace {
 
 boost::asio::io_context io_ctx;
