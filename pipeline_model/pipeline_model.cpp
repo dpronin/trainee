@@ -21,7 +21,7 @@ std::chrono::seconds incoming_period;
 boost::asio::steady_timer incoming_timer{io_ctx};
 
 std::chrono::seconds processing_period;
-std::vector<std::unique_ptr<boost::asio::steady_timer>> processors;
+std::vector<bool> processors_in_use;
 std::queue<
     std::pair<uint32_t, std::chrono::time_point<std::chrono::system_clock>>>
     frames_pending;
@@ -35,8 +35,8 @@ void frame_submit(
     uint32_t frame_nr,
     std::chrono::time_point<std::chrono::system_clock> frame_incoming_time,
     size_t processor_slot_nr) {
-  assert(processor_slot_nr < processors.size());
-  assert(nullptr == processors[processor_slot_nr]);
+  assert(processor_slot_nr < processors_in_use.size());
+  assert(!processors_in_use[processor_slot_nr]);
 
   auto const frame_submit_time{std::chrono::system_clock::now()};
 
@@ -47,14 +47,17 @@ void frame_submit(
 
   auto processing_timer{std::make_unique<boost::asio::steady_timer>(io_ctx)};
 
-  processing_timer->expires_after(processing_period);
-  processing_timer->async_wait(
+  auto *p_timer = processing_timer.get();
+  p_timer->expires_after(processing_period);
+  p_timer->async_wait(
       [frame_nr = frame_nr, frame_incoming_time = frame_incoming_time,
-       slot_nr = processor_slot_nr](boost::system::error_code const &ec) {
+       slot_nr = processor_slot_nr,
+       processing_timer =
+           std::move(processing_timer)](boost::system::error_code const &ec) {
         frame_processed(frame_nr, frame_incoming_time, slot_nr, ec);
       });
 
-  processors[processor_slot_nr] = std::move(processing_timer);
+  processors_in_use[processor_slot_nr] = true;
 }
 
 void frame_processed(
@@ -71,18 +74,16 @@ void frame_processed(
                std::chrono::duration_cast<std::chrono::milliseconds>(
                    frame_processed_time - frame_incoming_time));
 
-  assert(processor_slot_nr < processors.size());
-  assert(nullptr != processors[processor_slot_nr]);
+  assert(processor_slot_nr < processors_in_use.size());
+  assert(processors_in_use[processor_slot_nr]);
 
-  processors[processor_slot_nr] = {};
+  processors_in_use[processor_slot_nr] = false;
 
   while (!frames_pending.empty()) {
-    if (auto pit = std::ranges::find_if(
-            processors,
-            [](auto const &processing_timer) { return !processing_timer; });
-        processors.end() != pit) {
+    if (auto pit = std::ranges::find(processors_in_use, false);
+        processors_in_use.end() != pit) {
       frame_submit(frames_pending.front().first, frames_pending.front().second,
-                   pit - processors.begin());
+                   pit - processors_in_use.begin());
       frames_pending.pop();
     } else {
       break;
@@ -103,11 +104,10 @@ void frame_receive(boost::system::error_code const &ec) {
   std::println("frame #{}: received, time point {}", frame_nr,
                frame_incoming_time);
 
-  if (auto pit = std::ranges::find_if(
-          processors,
-          [](auto const &processing_timer) { return !processing_timer; });
-      processors.end() != pit) {
-    frame_submit(frame_nr, frame_incoming_time, pit - processors.begin());
+  if (auto pit = std::ranges::find(processors_in_use, false);
+      processors_in_use.end() != pit) {
+    frame_submit(frame_nr, frame_incoming_time,
+                 pit - processors_in_use.begin());
   } else {
     frames_pending.push({frame_nr, frame_incoming_time});
     std::println("frame #{}: placed into pending queue, "
@@ -145,7 +145,7 @@ int main(int argc, char const *argv[]) {
       std::chrono::seconds{boost::lexical_cast<uint32_t>(argv[1])};
   processing_period =
       std::chrono::seconds{boost::lexical_cast<uint32_t>(argv[2])};
-  processors.resize(boost::lexical_cast<int32_t>(argv[3]));
+  processors_in_use.resize(boost::lexical_cast<int32_t>(argv[3]));
 
   incoming_timer.expires_at(std::chrono::steady_clock::now());
   incoming_timer.async_wait(frame_receive);
