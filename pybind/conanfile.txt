@@ -1,5 +1,5 @@
 [requires]
-pybind11/[~2.11]
+pybind11/[~2.13]
 
 [generators]
 CMakeToolchain
