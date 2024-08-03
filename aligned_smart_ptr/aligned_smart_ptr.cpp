@@ -13,27 +13,9 @@
 #include <typeinfo>
 #include <vector>
 
-#ifdef __clang__
 #include <print>
-#else
-#include <format>
-#endif
 
 #include <unistd.h>
-
-#ifndef __clang__
-
-namespace std {
-
-template <typename... Args>
-void println(std::ostream &os, std::format_string<Args...> fmt,
-             Args &&...args) {
-  os << std::format(fmt, std::forward<Args>(args)...) << '\n';
-}
-
-} // namespace std
-
-#endif
 
 template <typename T> class Allocator final {
 public:

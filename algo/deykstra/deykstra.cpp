@@ -3,23 +3,7 @@
 #include <unordered_set>
 #include <vector>
 
-#ifdef __clang__
 #include <print>
-#else
-#include <format>
-#include <ostream>
-
-namespace std {
-
-template <typename... Args>
-void println(std::ostream &os, std::format_string<Args...> fmt,
-             Args &&...args) {
-  os << std::format(fmt, std::forward<Args>(args)...) << '\n';
-}
-
-} // namespace std
-
-#endif
 
 namespace {
 
