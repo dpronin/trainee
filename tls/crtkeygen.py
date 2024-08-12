@@ -3,7 +3,7 @@
 from os import *
 
 if __name__ == "__main__":
-    system('mkdir -p .crtkey')
+    system("mkdir -p .crtkey")
     system("openssl version")
     system("openssl genrsa"
            " -out .crtkey/root_ca.key 2048")
