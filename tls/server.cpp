@@ -14,14 +14,12 @@
 #include <openssl/ssl.h>
 #include <openssl/types.h>
 
+using namespace std::string_view_literals;
+
+constexpr auto kServicePortDefault{"3333"sv};
+
 int main(int argc, char const *argv[]) {
-  std::string_view port;
-
-  if (argc > 1)
-    port = argv[1];
-
-  if (port.empty())
-    port = "3333";
+  auto const port{argc > 1 ? argv[1] : kServicePortDefault};
 
   auto ctx{
       std::unique_ptr<SSL_CTX, void (*)(SSL_CTX *)>{
@@ -38,7 +36,8 @@ int main(int argc, char const *argv[]) {
 
   if (!SSL_CTX_set_min_proto_version(ctx.get(), TLS1_3_VERSION)) {
     ERR_print_errors_fp(stderr);
-    std::println(std::cerr, "Failed to set the minimum TLS protocol version");
+    std::println(std::cerr,
+                 "Failed to set the minimum TLSv1.3 protocol version");
     return EXIT_FAILURE;
   }
 
@@ -94,54 +93,58 @@ int main(int argc, char const *argv[]) {
   while (true) {
     ERR_clear_error();
 
-    if (!(BIO_do_accept(acceptor_bio.get()) > 0)) {
+    if (!(BIO_do_accept(acceptor_bio.get()) > 0))
       continue;
-    }
 
-    auto bio{
+    auto client_bio{
         std::unique_ptr<BIO, int (*)(BIO *)>{
             BIO_pop(acceptor_bio.get()),
             BIO_free,
         },
     };
 
-    std::println(std::cout, "New client connection accepted");
+    std::println(std::cout, "New client connection accepted from");
 
-    auto ssl{
+    auto client_ssl{
         std::unique_ptr<SSL, void (*)(SSL *)>{SSL_new(ctx.get()), SSL_free},
     };
 
-    if (!ssl) {
+    if (!client_ssl) {
       ERR_print_errors_fp(stderr);
       std::println(std::cerr, "Error creating SSL handle for new connection");
       continue;
     }
 
-    SSL_set_bio(ssl.get(), bio.get(), bio.get());
-    bio.release();
+    SSL_set_bio(client_ssl.get(), client_bio.get(), client_bio.get());
+    client_bio.release();
 
-    if (!(SSL_accept(ssl.get()) > 0)) {
+    if (!(SSL_accept(client_ssl.get()) > 0)) {
       ERR_print_errors_fp(stderr);
       std::println(std::cerr, "Error performing SSL handshake with client");
       continue;
     }
 
-    size_t total{0};
-
     std::array<char, 1024> buf;
     for (size_t nread{0};
-         SSL_read_ex(ssl.get(), buf.data(), buf.size(), &nread); nread = 0) {
+         SSL_read_ex(client_ssl.get(), buf.data(), buf.size(), &nread);
+         nread = 0) {
+
+      std::println(std::cerr,
+                   "Received message '{}' from the client. Echoing...",
+                   std::string_view{buf.data(), nread});
+
       if (size_t nwritten{0};
-          SSL_write_ex(ssl.get(), buf.data(), nread, &nwritten) &&
+          SSL_write_ex(client_ssl.get(), buf.data(), nread, &nwritten) &&
           nwritten == nread) {
-        total += nwritten;
         continue;
       }
+
       std::println(std::cerr, "Error echoing client input");
+
       break;
     }
 
-    std::println(std::cerr, "Client connection closed, {} bytes sent", total);
+    std::println(std::cerr, "Client connection closed");
   }
 
   return EXIT_SUCCESS;

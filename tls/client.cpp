@@ -5,10 +5,8 @@
 #include <iostream>
 #include <memory>
 #include <new>
-#include <openssl/bio.h>
-#include <openssl/tls1.h>
-#include <openssl/x509_vfy.h>
 #include <print>
+#include <string>
 #include <string_view>
 
 #include <netdb.h>
@@ -16,18 +14,19 @@
 #include <sys/types.h>
 #include <unistd.h>
 
+#include <openssl/bio.h>
 #include <openssl/err.h>
 #include <openssl/ssl.h>
+#include <openssl/tls1.h>
 #include <openssl/types.h>
+#include <openssl/x509_vfy.h>
+
+using namespace std::string_view_literals;
+
+constexpr auto kPeerHostPortDefault{"localhost:3333"sv};
 
 int main(int argc, char const *argv[]) {
-  std::string_view hostport;
-
-  if (argc > 1)
-    hostport = argv[1];
-
-  if (hostport.empty())
-    hostport = "localhost:3333";
+  auto const hostport{argc > 1 ? argv[1] : kPeerHostPortDefault};
 
   auto ctx{
       std::unique_ptr<SSL_CTX, void (*)(SSL_CTX *)>{
@@ -44,7 +43,8 @@ int main(int argc, char const *argv[]) {
 
   if (!SSL_CTX_set_min_proto_version(ctx.get(), TLS1_3_VERSION)) {
     ERR_print_errors_fp(stderr);
-    std::println(std::cerr, "Failed to set the minimum TLS protocol version");
+    std::println(std::cerr,
+                 "Failed to set the minimum TLSv1.3 protocol version");
     return EXIT_FAILURE;
   }
 
@@ -71,7 +71,9 @@ int main(int argc, char const *argv[]) {
 
   auto const hostname{std::string{hostport.substr(0, hostport.find(':'))}};
   auto const port{
-      hostport.substr(std::min(hostname.size() + 1, hostport.size())),
+      std::string{
+          hostport.substr(std::min(hostname.size() + 1, hostport.size())),
+      },
   };
 
   addrinfo hints{};
@@ -166,9 +168,9 @@ int main(int argc, char const *argv[]) {
     return EXIT_FAILURE;
   }
 
-  using namespace std::string_view_literals;
+  auto const msg{"Hello, world"sv};
 
-  auto msg{"Hello, world"sv};
+  std::println(std::cout, "Sending message '{}' to the peer", msg);
 
   size_t nwritten{0};
   SSL_write_ex(ssl.get(), msg.data(), msg.size(), &nwritten);
@@ -179,9 +181,8 @@ int main(int argc, char const *argv[]) {
   size_t nread{0};
   SSL_read_ex(ssl.get(), buf.data(), buf.size(), &nread);
 
-  msg = {buf.data(), nread};
-
-  std::println(std::cout, "echo from '{}': '{}'", hostname, msg);
+  std::println(std::cout, "Received message '{}' from the peer",
+               std::string_view{buf.data(), nread});
 
   return 0;
 }
