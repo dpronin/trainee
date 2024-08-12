@@ -9,6 +9,16 @@ if __name__ == "__main__":
            " -out .crtkey/root_ca.key 2048")
     system("openssl req -x509 -new"
            " -key .crtkey/root_ca.key"
+           " -subj "
+           "\""
+           "/C=RU"
+           "/ST=St. Petersburg"
+           "/L=St. Petersburg"
+           "/O=TLS Server Inc."
+           "/OU=TLS Server Inc."
+           "/CN=localhost"
+           "/CN=127.0.0.1"
+           "\""
            " -days 365"
            " -out .crtkey/root_ca.crt")
     system("openssl genrsa"
