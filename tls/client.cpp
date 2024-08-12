@@ -50,7 +50,7 @@ int main(int argc, char const *argv[]) {
 
   SSL_CTX_set_verify(ctx.get(), SSL_VERIFY_PEER, nullptr);
 
-  if (!(SSL_CTX_set_default_verify_paths(ctx.get()) > 0)) {
+  if (!(SSL_CTX_load_verify_file(ctx.get(), ".crtkey/root_ca.crt") > 0)) {
     ERR_print_errors_fp(stderr);
     std::println(std::cerr,
                  "Failed to set the default trusted certificate store");

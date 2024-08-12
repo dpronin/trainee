@@ -49,14 +49,15 @@ int main(int argc, char const *argv[]) {
 
   SSL_CTX_set_options(ctx.get(), opts);
 
-  if (!(SSL_CTX_use_certificate_chain_file(ctx.get(), "server.pem") > 0)) {
+  if (!(SSL_CTX_use_certificate_file(ctx.get(), ".crtkey/server.crt",
+                                     SSL_FILETYPE_PEM) > 0)) {
     ERR_print_errors_fp(stderr);
     std::println(std::cerr, "Failed to load the server certificate chain file");
     return EXIT_FAILURE;
   }
 
-  if (!(SSL_CTX_use_PrivateKey_file(ctx.get(), "server.key", SSL_FILETYPE_PEM) >
-        0)) {
+  if (!(SSL_CTX_use_PrivateKey_file(ctx.get(), ".crtkey/server.key",
+                                    SSL_FILETYPE_PEM) > 0)) {
     ERR_print_errors_fp(stderr);
     std::println(std::cerr,
                  "Error loading the server private key file, possible "
