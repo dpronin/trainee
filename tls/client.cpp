@@ -2,6 +2,7 @@
 #include <cstdio>
 #include <cstdlib>
 
+#include <filesystem>
 #include <iostream>
 #include <memory>
 #include <new>
@@ -25,8 +26,44 @@ using namespace std::string_view_literals;
 
 constexpr auto kPeerHostPortDefault{"localhost:3333"sv};
 
+namespace {
+
+[[noreturn]] void show_help(std::string_view program) {
+  auto const help{
+      R"HELP(
+-s, --service    Host:Port of the service to connect to
+
+--root-ca-crt    Path to the root CA certificate to verify certificates of the
+                 service connected
+
+-h, --help       Show this help page
+    )HELP"sv,
+  };
+  std::println(std::cout, "{}:", program);
+  std::println(std::cout, "{}", help);
+  exit(EXIT_SUCCESS);
+}
+
+} // namespace
+
 int main(int argc, char const *argv[]) {
-  auto const hostport{argc > 1 ? argv[1] : kPeerHostPortDefault};
+  std::string_view hostport{kPeerHostPortDefault};
+  std::filesystem::path root_ca_crt{".crtkey/root_ca.crt"};
+
+  auto const first{argv};
+  auto const last{argv + argc};
+  for (auto arg_it{first}; last != arg_it; ++arg_it) {
+    if (!(strcmp(*arg_it, "-s") && strcmp(*arg_it, "--service")) &&
+        (arg_it + 1) != last) {
+      hostport = *(++arg_it);
+    } else if (!strcmp(*arg_it, "--root-ca-crt") && (arg_it + 1) != last) {
+      root_ca_crt = *(++arg_it);
+    } else if (!(strcmp(*arg_it, "-h") && strcmp(*arg_it, "--help"))) {
+      show_help(argv[0]);
+      /* must not be here */
+      std::abort();
+    }
+  }
 
   auto ctx{
       std::unique_ptr<SSL_CTX, void (*)(SSL_CTX *)>{
@@ -50,7 +87,7 @@ int main(int argc, char const *argv[]) {
 
   SSL_CTX_set_verify(ctx.get(), SSL_VERIFY_PEER, nullptr);
 
-  if (!(SSL_CTX_load_verify_file(ctx.get(), ".crtkey/root_ca.crt") > 0)) {
+  if (!(SSL_CTX_load_verify_file(ctx.get(), root_ca_crt.c_str()) > 0)) {
     ERR_print_errors_fp(stderr);
     std::println(std::cerr,
                  "Failed to set the default trusted certificate store");

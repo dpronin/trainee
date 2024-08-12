@@ -2,6 +2,7 @@
 #include <cstdio>
 #include <cstdlib>
 
+#include <filesystem>
 #include <iostream>
 #include <memory>
 #include <print>
@@ -18,8 +19,47 @@ using namespace std::string_view_literals;
 
 constexpr auto kServicePortDefault{"3333"sv};
 
+namespace {
+
+[[noreturn]] void show_help(std::string_view program) {
+  auto const help{
+      R"HELP(
+-p, --port       Port of the service to bind onto
+
+--crt            Path to the certifacte of the service
+--pkey           Path to the private key of the service
+
+-h, --help       Show this help page
+    )HELP"sv,
+  };
+  std::println(std::cout, "{}:", program);
+  std::println(std::cout, "{}", help);
+  exit(EXIT_SUCCESS);
+}
+
+} // namespace
+
 int main(int argc, char const *argv[]) {
-  auto const port{argc > 1 ? argv[1] : kServicePortDefault};
+  std::string_view port{kServicePortDefault};
+  std::filesystem::path crt{".crtkey/server.crt"};
+  std::filesystem::path pkey{".crtkey/server.key"};
+
+  auto const first{argv};
+  auto const last{argv + argc};
+  for (auto arg_it{first}; last != arg_it; ++arg_it) {
+    if (!(strcmp(*arg_it, "-p") && strcmp(*arg_it, "--port")) &&
+        (arg_it + 1) != last) {
+      port = *(++arg_it);
+    } else if (!strcmp(*arg_it, "--crt") && (arg_it + 1) != last) {
+      crt = *(++arg_it);
+    } else if (!strcmp(*arg_it, "--pkey") && (arg_it + 1) != last) {
+      pkey = *(++arg_it);
+    } else if (!(strcmp(*arg_it, "-h") && strcmp(*arg_it, "--help"))) {
+      show_help(argv[0]);
+      /* must not be here */
+      std::abort();
+    }
+  }
 
   auto ctx{
       std::unique_ptr<SSL_CTX, void (*)(SSL_CTX *)>{
@@ -48,15 +88,15 @@ int main(int argc, char const *argv[]) {
 
   SSL_CTX_set_options(ctx.get(), opts);
 
-  if (!(SSL_CTX_use_certificate_file(ctx.get(), ".crtkey/server.crt",
-                                     SSL_FILETYPE_PEM) > 0)) {
+  if (!(SSL_CTX_use_certificate_file(ctx.get(), crt.c_str(), SSL_FILETYPE_PEM) >
+        0)) {
     ERR_print_errors_fp(stderr);
     std::println(std::cerr, "Failed to load the server certificate chain file");
     return EXIT_FAILURE;
   }
 
-  if (!(SSL_CTX_use_PrivateKey_file(ctx.get(), ".crtkey/server.key",
-                                    SSL_FILETYPE_PEM) > 0)) {
+  if (!(SSL_CTX_use_PrivateKey_file(ctx.get(), pkey.c_str(), SSL_FILETYPE_PEM) >
+        0)) {
     ERR_print_errors_fp(stderr);
     std::println(std::cerr,
                  "Error loading the server private key file, possible "
