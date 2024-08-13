@@ -50,7 +50,7 @@ int main(int argc, char const *argv[]) {
   std::string_view hostport{kPeerHostPortDefault};
   std::filesystem::path root_ca_crt{".crtkey/root_ca.crt"};
 
-  auto const first{argv};
+  auto const first{argv + 1};
   auto const last{argv + argc};
   for (auto arg_it{first}; last != arg_it; ++arg_it) {
     if (!(strcmp(*arg_it, "-s") && strcmp(*arg_it, "--service")) &&

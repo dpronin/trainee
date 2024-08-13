@@ -44,7 +44,7 @@ int main(int argc, char const *argv[]) {
   std::filesystem::path crt{".crtkey/server.crt"};
   std::filesystem::path pkey{".crtkey/server.key"};
 
-  auto const first{argv};
+  auto const first{argv + 1};
   auto const last{argv + argc};
   for (auto arg_it{first}; last != arg_it; ++arg_it) {
     if (!(strcmp(*arg_it, "-p") && strcmp(*arg_it, "--port")) &&
