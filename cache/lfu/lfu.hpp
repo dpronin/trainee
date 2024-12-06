@@ -68,28 +68,10 @@ public:
     return std::nullopt;
   }
 
-  std::optional<node_type> put(node_type const &node) {
-    auto evicted_value{std::optional<std::pair<key_type, value_type>>{}};
+  std::optional<node_type> put(node_type const &node) { return put_(node); }
 
-    // finding in the hash table is O(1) operation
-    if (auto i = cache_.find(node.first); i != cache_.end()) {
-      // touching is O(1) complexity, see below
-      i->second.value = touch(i->second.value);
-      i->second.value.second->second = node.second;
-      return evicted_value;
-    } else if (cache_full()) {
-      // LFU node detaching is O(1) complexity, see below
-      auto [key, value] = lfu_detach();
-      // erasing from the cache is O(1) complexity
-      cache_.erase(key);
-      evicted_value.emplace(std::move(key), std::move(value));
-    }
-
-    // LFU node attaching is O(1) complexity, see below
-    // inserting a new pair {key, value} in the hash table is O(1) complexity
-    cache_[node.first].value = lfu_attach({node.first, node.second});
-
-    return evicted_value;
+  std::optional<node_type> put(node_type &&node) {
+    return put_(std::move(node));
   }
 
   void invalidate(key_type const &key) {
@@ -105,22 +87,46 @@ public:
   }
 
 private:
+  template <typename U> std::optional<node_type> put_(U &&value) {
+    std::optional<node_type> evicted_value;
+
+    // finding in the hash table is O(1) operation
+    if (auto it{cache_.find(value.first)}; cache_.end() != it) {
+      // touching is O(1) complexity, see below
+      it->second.value = touch(it->second.value);
+      it->second.value.second->second = std::forward<U>(value).second;
+      return evicted_value;
+    } else if (full()) {
+      // LFU node detaching is O(1) complexity, see below
+      evicted_value.emplace(lfu_detach());
+      // erasing from the cache is O(1) complexity
+      cache_.erase(evicted_value->first);
+    }
+
+    // LFU node attaching is O(1) complexity, see below
+    // inserting a new pair {key, value} in the hash table is O(1) complexity
+    auto &item = cache_[value.first];
+    item.value = lfu_attach(std::forward<U>(value));
+
+    return evicted_value;
+  }
+
   void invalidate(cache::iterator it) {
     lfu_detach(it->second.value);
     cache_.erase(it);
   }
 
-  bool cache_full() const { return !(cache_.size() < len_max()); }
+  bool full() const { return !(cache_.size() < len_max()); }
 
   // LFU node attaching is O(1) complexity
-  [[nodiscard]] cache_value lfu_attach(node_type &&v) {
+  template <typename U> [[nodiscard]] cache_value lfu_attach(U &&v) {
     if (lfu_list_.empty() || lfu_list_.front().first > 1)
       lfu_list_.push_front({1, {}});
 
     auto &lfu_list_first{lfu_list_.front()};
     assert(1 == lfu_list_first.first);
     auto &lfu_lru_list{lfu_list_first.second};
-    lfu_lru_list.push_front(std::move(v));
+    lfu_lru_list.push_front(std::forward<U>(v));
 
     return {lfu_list_.begin(), lfu_lru_list.begin()};
   }
