@@ -69,10 +69,20 @@ public:
     return const_span_cast(find(key));
   }
 
-  std::optional<std::pair<key_type, data_type>>
-  update(std::pair<key_type, data_type> value);
+  uint64_t capacity() const { return len_max(); }
 
   bool exists(key_type const &key) const { return cache_.contains(key); }
+
+  bool full() const { return !(cache_.size() < capacity()); }
+
+  std::optional<std::pair<key_type, data_type>>
+  update(value_type const &value) {
+    return put(value);
+  }
+
+  std::optional<std::pair<key_type, data_type>> update(value_type &&value) {
+    return put(std::move(value));
+  }
 
   void invalidate(key_type const &key) {
     if (auto it{cache_.find(key)}; cache_.end() != it)
@@ -87,6 +97,9 @@ public:
   }
 
 private:
+  template <typename U>
+  std::optional<std::pair<key_type, data_type>> put(U &&value);
+
   template <typename U>
   static std::span<U> const_span_cast(std::span<U const> from) {
     return std::span{const_cast<U *>(from.data()), from.size()};
@@ -135,24 +148,24 @@ auto generic_lru<Key, T, KeyHash, KeyEqual>::create(uint64_t cache_len,
 
 template <typename Key, typename T, typename KeyHash, typename KeyEqual>
   requires std::equivalence_relation<KeyEqual, Key, Key>
-auto generic_lru<Key, T, KeyHash, KeyEqual>::update(
-    std::pair<key_type, data_type> value)
+template <typename U>
+auto generic_lru<Key, T, KeyHash, KeyEqual>::put(U &&value)
     -> std::optional<std::pair<key_type, data_type>> {
-  auto evicted_value{std::optional<std::pair<key_type, data_type>>{}};
+  std::optional<value_type> evicted_value;
 
-  if (auto it{cache_.find(value.first)}; it != cache_.end()) {
+  if (auto it{cache_.find(value.first)}; cache_.end() != it) {
     evicted_value.emplace(
         it->second->first,
-        std::exchange(it->second->second, std::move_if_noexcept(value.second)));
+        std::exchange(it->second->second, std::forward<U>(value).second));
     touch(it->second);
     return evicted_value;
-  } else if (!(cache_.size() < len_max())) {
+  } else if (full()) {
     cache_.erase(recent_list_.back().first);
-    evicted_value.emplace(std::move_if_noexcept(recent_list_.back()));
+    evicted_value.emplace(std::forward<U>(recent_list_.back()));
     recent_list_.pop_back();
   }
 
-  recent_list_.emplace_front(std::move_if_noexcept(value));
+  recent_list_.emplace_front(std::forward<U>(value));
   cache_[recent_list_.begin()->first] = recent_list_.begin();
 
   return evicted_value;
