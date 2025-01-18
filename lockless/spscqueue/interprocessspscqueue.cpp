@@ -45,7 +45,7 @@ public:
         [[likely]] {
 
       v = items_[ch];
-      head_.store((ch + 1) % items_.size(), std::memory_order_release);
+      head_.store((ch + 1) % items_.size(), std::memory_order_relaxed);
     }
 
     return v;
