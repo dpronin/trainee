@@ -51,7 +51,7 @@ public:
     return v;
   }
 
-  bool push(T const &v) noexcept(std::is_nothrow_copy_constructible_v<T>) {
+  bool push(T const &v) noexcept(std::is_nothrow_copy_assignable_v<T>) {
     auto const ct{tail_.load(std::memory_order_relaxed)};
 
     auto const nt{(ct + 1) % items_.size()};
