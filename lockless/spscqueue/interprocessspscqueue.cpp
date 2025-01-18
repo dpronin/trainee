@@ -20,10 +20,10 @@
 template <typename T>
 concept standard_layout = std::is_standard_layout_v<T>;
 
-using spscqueue_t = static_spscqueue<std::pair<int, int>, 5u>;
+using queue_t = static_spscqueue<std::pair<int, int>, 5u>;
 
 struct process_shared_data {
-  spscqueue_t q;
+  queue_t q;
 };
 static_assert(standard_layout<process_shared_data>,
               "process_shared_data must be standard layout");
