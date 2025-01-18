@@ -1,6 +1,5 @@
 #include <cassert>
 #include <cstddef>
-#include <cstdint>
 #include <cstdlib>
 #include <cstring>
 #include <ctime>
@@ -9,78 +8,23 @@
 #include <sys/wait.h>
 #include <unistd.h>
 
-#include <array>
-#include <atomic>
 #include <chrono>
 #include <iostream>
 #include <memory>
-#include <new>
-#include <optional>
 #include <ranges>
 #include <thread>
 #include <type_traits>
 #include <vector>
 
+#include "spmcqueue.hpp"
+
 template <typename T>
 concept standard_layout = std::is_standard_layout_v<T>;
 
-#ifdef __cpp_lib_hardware_interference_size
-constexpr size_t hardware_destructive_interference_size{
-    std::hardware_destructive_interference_size};
-#else
-constexpr size_t hardware_destructive_interference_size{64};
-#endif
-
-template <standard_layout T, size_t N> class communication_lockless_spmc_queue {
-public:
-  communication_lockless_spmc_queue() = default;
-  ~communication_lockless_spmc_queue() = default;
-
-  [[nodiscard]] static constexpr uint32_t capacity() noexcept { return N; }
-
-  std::optional<T> pop() noexcept(std::is_nothrow_copy_constructible_v<T> &&
-                                  std::is_nothrow_destructible_v<T>) {
-    std::optional<T> v;
-
-    auto ch{head_.load(std::memory_order_relaxed)};
-    do {
-      if (auto const ct{tail_.load(std::memory_order_acquire)}; ct == ch)
-          [[unlikely]] {
-
-        v.reset();
-        break;
-      }
-      v = items_[ch];
-    } while (!head_.compare_exchange_weak(ch, (ch + 1) % items_.size(),
-                                          std::memory_order_acq_rel));
-
-    return v;
-  }
-
-  bool push(T const &v) noexcept(std::is_nothrow_copy_assignable_v<T>) {
-    auto const ct{tail_.load(std::memory_order_relaxed)};
-
-    auto const nt{(ct + 1) % items_.size()};
-    if (nt == head_.load(std::memory_order_relaxed)) [[unlikely]]
-      return false;
-
-    items_[ct] = v;
-    tail_.store(nt, std::memory_order_release);
-
-    return true;
-  }
-
-private:
-  alignas(hardware_destructive_interference_size) std::atomic_uint32_t head_;
-  alignas(hardware_destructive_interference_size) std::atomic_uint32_t tail_;
-  alignas(hardware_destructive_interference_size) std::array<T, N + 1> items_;
-};
-
-using communication_lockless_spmc_queue_t =
-    communication_lockless_spmc_queue<std::pair<int, int>, 5u>;
+using static_spmcqueue_t = static_spmcqueue<std::pair<int, int>, 5u>;
 
 struct process_shared_data {
-  communication_lockless_spmc_queue_t q;
+  static_spmcqueue_t q;
 };
 static_assert(standard_layout<process_shared_data>,
               "process_shared_data must be standard layout");
