@@ -19,6 +19,8 @@ constexpr size_t hardware_destructive_interference_size =
 constexpr size_t hardware_destructive_interference_size{64};
 #endif
 
+constexpr size_t is_power_of_2(size_t n) { return 0 == (n & (n - 1)); }
+
 } // namespace detail
 
 template <std::copy_constructible T, size_t N> class static_spscqueue {
@@ -37,7 +39,7 @@ public:
         [[likely]] {
 
       v = items_[ch];
-      head_.store((ch + 1) % items_.size(), std::memory_order_relaxed);
+      head_.store(next_to(ch), std::memory_order_relaxed);
     }
 
     return v;
@@ -46,7 +48,7 @@ public:
   bool push(T const &v) noexcept(std::is_nothrow_copy_assignable_v<T>) {
     auto const ct{tail_.load(std::memory_order_relaxed)};
 
-    auto const nt{(ct + 1) % items_.size()};
+    auto const nt{next_to(ct)};
     if (nt == head_.load(std::memory_order_relaxed)) [[unlikely]]
       return false;
 
@@ -57,12 +59,19 @@ public:
   }
 
 private:
+  static size_t next_to(size_t pos) {
+    if constexpr (detail::is_power_of_2(capacity() + 1))
+      return (pos + 1) & capacity();
+    else
+      return (pos + 1) % (capacity() + 1);
+  }
+
   alignas(detail::hardware_destructive_interference_size)
       std::atomic_uint32_t head_;
   alignas(detail::hardware_destructive_interference_size)
       std::atomic_uint32_t tail_;
   alignas(detail::hardware_destructive_interference_size)
-      std::array<T, N + 1> items_;
+      std::array<T, capacity() + 1> items_;
 };
 
 template <std::copy_constructible T> class spscqueue {
