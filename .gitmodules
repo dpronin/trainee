@@ -13,3 +13,6 @@
 [submodule "beautiful-number"]
 	path = beautiful-number
 	url = git@github.com:dpronin/beautiful-number.git
+[submodule "xroost"]
+	path = xroost
+	url = git@github.com:dpronin/xroost.git
