@@ -16,7 +16,7 @@
 #include <type_traits>
 #include <vector>
 
-#include "spmcqueue.hpp"
+#include <xroost/lockless/spmcqueue.hpp>
 
 template <typename T>
 concept standard_layout = std::is_standard_layout_v<T>;

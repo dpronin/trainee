@@ -15,7 +15,7 @@
 #include <type_traits>
 #include <utility>
 
-#include "spscqueue.hpp"
+#include <xroost/lockless/spscqueue.hpp>
 
 template <typename T>
 concept standard_layout = std::is_standard_layout_v<T>;
