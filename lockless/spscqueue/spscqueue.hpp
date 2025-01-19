@@ -23,12 +23,20 @@ constexpr size_t is_power_of_2(size_t n) { return 0 == (n & (n - 1)); }
 
 } // namespace detail
 
-template <std::copy_constructible T, size_t N> class static_spscqueue {
+template <typename T, size_t N>
+  requires(std::default_initializable<T> && std::copy_constructible<T>)
+class static_spscqueue {
 public:
   static_spscqueue() = default;
   ~static_spscqueue() = default;
 
-  [[nodiscard]] static constexpr uint32_t capacity() noexcept { return N; }
+  static_spscqueue(static_spscqueue const &) = delete;
+  static_spscqueue &operator=(static_spscqueue const &) = delete;
+
+  static_spscqueue(static_spscqueue &&) = delete;
+  static_spscqueue &operator=(static_spscqueue &&) = delete;
+
+  [[nodiscard]] static constexpr uint32_t capacity() { return N; }
 
   std::optional<T> pop() noexcept(std::is_nothrow_copy_constructible_v<T> &&
                                   std::is_nothrow_destructible_v<T>) {
@@ -74,10 +82,18 @@ private:
       std::array<T, capacity() + 1> items_;
 };
 
-template <std::copy_constructible T> class spscqueue {
+template <typename T>
+  requires(std::default_initializable<T> && std::copy_constructible<T>)
+class spscqueue {
 public:
-  spscqueue() = default;
+  explicit spscqueue(size_t capacity) : items_(capacity + 1) {}
   ~spscqueue() = default;
+
+  spscqueue(spscqueue const &) = delete;
+  spscqueue &operator=(spscqueue const &) = delete;
+
+  spscqueue(spscqueue &&) = delete;
+  spscqueue &operator=(spscqueue &&) = delete;
 
   [[nodiscard]] uint32_t capacity() const { return items_.size() - 1; }
 

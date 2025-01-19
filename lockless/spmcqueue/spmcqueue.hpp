@@ -19,14 +19,24 @@ constexpr size_t hardware_destructive_interference_size =
 constexpr size_t hardware_destructive_interference_size{64};
 #endif
 
+constexpr size_t is_power_of_2(size_t n) { return 0 == (n & (n - 1)); }
+
 } // namespace detail
 
-template <std::copy_constructible T, size_t N> class static_spmcqueue {
+template <typename T, size_t N>
+  requires(std::default_initializable<T> && std::copy_constructible<T>)
+class static_spmcqueue {
 public:
   static_spmcqueue() = default;
   ~static_spmcqueue() = default;
 
-  [[nodiscard]] static constexpr uint32_t capacity() noexcept { return N; }
+  static_spmcqueue(static_spmcqueue const &) = delete;
+  static_spmcqueue &operator=(static_spmcqueue const &) = delete;
+
+  static_spmcqueue(static_spmcqueue &&) = delete;
+  static_spmcqueue &operator=(static_spmcqueue &&) = delete;
+
+  [[nodiscard]] static constexpr uint32_t capacity() { return N; }
 
   std::optional<T> pop() noexcept(std::is_nothrow_copy_constructible_v<T> &&
                                   std::is_nothrow_destructible_v<T>) {
@@ -41,7 +51,7 @@ public:
         break;
       }
       v.emplace(items_[ch]);
-    } while (!head_.compare_exchange_weak(ch, (ch + 1) % items_.size(),
+    } while (!head_.compare_exchange_weak(ch, next_to(ch),
                                           std::memory_order_acq_rel));
 
     return v;
@@ -50,7 +60,7 @@ public:
   bool push(T const &v) noexcept(std::is_nothrow_copy_assignable_v<T>) {
     auto const ct{tail_.load(std::memory_order_relaxed)};
 
-    auto const nt{(ct + 1) % items_.size()};
+    auto const nt{next_to(ct)};
     if (nt == head_.load(std::memory_order_relaxed)) [[unlikely]]
       return false;
 
@@ -61,18 +71,33 @@ public:
   }
 
 private:
+  static size_t next_to(size_t pos) {
+    if constexpr (detail::is_power_of_2(capacity() + 1))
+      return (pos + 1) & capacity();
+    else
+      return (pos + 1) % (capacity() + 1);
+  }
+
   alignas(detail::hardware_destructive_interference_size)
       std::atomic_uint32_t head_;
   alignas(detail::hardware_destructive_interference_size)
       std::atomic_uint32_t tail_;
   alignas(detail::hardware_destructive_interference_size)
-      std::array<T, N + 1> items_;
+      std::array<T, capacity() + 1> items_;
 };
 
-template <std::copy_constructible T> class spmcqueue {
+template <typename T>
+  requires(std::default_initializable<T> && std::copy_constructible<T>)
+class spmcqueue {
 public:
-  spmcqueue() = default;
+  explicit spmcqueue(size_t capacity) : items_(capacity + 1) {}
   ~spmcqueue() = default;
+
+  spmcqueue(spmcqueue const &) = delete;
+  spmcqueue &operator=(spmcqueue const &) = delete;
+
+  spmcqueue(spmcqueue &&) = delete;
+  spmcqueue &operator=(spmcqueue &&) = delete;
 
   [[nodiscard]] uint32_t capacity() const { return items_.size() - 1; }
 
