@@ -31,10 +31,8 @@ void foo(T v, Args... args) {
 } // namespace
 
 int main(int argc, char const *argv[]) {
-  std::cout << std::format("current platform is {} endian",
-                           std::endian::big == std::endian::native ? "big"
-                                                                   : "little")
-            << std::endl;
+  std::println("current platform is {} endian",
+               std::endian::big == std::endian::native ? "big" : "little");
   foo(UINT8_C(0x11), UINT16_C(0x1122), UINT32_C(0x11223344),
       UINT64_C(0x1122334455667788), INT8_C(0x17), INT16_C(0x1877),
       INT32_C(0x1E8899AA77), INT64_C(0x1E8899AABBCCDD77));
