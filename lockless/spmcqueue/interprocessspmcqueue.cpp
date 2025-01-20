@@ -21,7 +21,7 @@
 template <typename T>
 concept standard_layout = std::is_standard_layout_v<T>;
 
-using queue_t = static_spmcqueue<std::pair<int, int>, 5u>;
+using queue_t = xroost::lockless::static_spmcqueue<std::pair<int, int>, 5u>;
 
 struct process_shared_data {
   queue_t q;
