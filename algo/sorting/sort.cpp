@@ -14,7 +14,7 @@
 #include <ranges>
 #include <vector>
 
-#include "sort_all.hpp"
+#include <xroost/algo/sorting/sort_all.hpp>
 
 namespace {
 
@@ -95,27 +95,27 @@ int main(int argc, char const *argv[]) {
   switch (algo) {
   case algo::bubble:
     std::cout << "use bubble sort algorithm" << std::endl;
-    bubble_sort(v);
+    xroost::algo::bubble_sort(v);
     break;
   case algo::heap:
     std::cout << "use heap sort algorithm" << std::endl;
-    heap_sort(v);
+    xroost::algo::heap_sort(v);
     break;
   case algo::insertion:
     std::cout << "use insertion sort algorithm" << std::endl;
-    insertion_sort(v);
+    xroost::algo::insertion_sort(v);
     break;
   case algo::quick:
     std::cout << "use quick sort algorithm" << std::endl;
-    quick_sort(v);
+    xroost::algo::quick_sort(v);
     break;
   case algo::quick_r:
     std::cout << "use recursive quick sort algorithm" << std::endl;
-    quick_sort_r(v);
+    xroost::algo::quick_sort_r(v);
     break;
   case algo::selection:
     std::cout << "use selection sort algorithm" << std::endl;
-    selection_sort(v);
+    xroost::algo::selection_sort(v);
     break;
   }
 
