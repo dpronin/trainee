@@ -6,6 +6,8 @@
 #include <sstream>
 #include <vector>
 
+#include <xroost/algo/partition.hpp>
+
 namespace {
 
 template <std::ranges::input_range Range> void print(Range const &v) {
@@ -13,33 +15,6 @@ template <std::ranges::input_range Range> void print(Range const &v) {
       v, std::ostream_iterator<typename std::iterator_traits<
              std::ranges::iterator_t<Range>>::value_type>(std::cout, " "));
   std::cout << std::endl;
-}
-
-template <std::permutable Iterator, std::sentinel_for<Iterator> Sentinel,
-          typename Proj = std::identity,
-          std::indirect_unary_predicate<std::projected<Iterator, Proj>> Pred>
-Iterator partition(Iterator first, Sentinel last, Pred pred, Proj proj = {}) {
-  first =
-      std::ranges::find_if_not(std::ranges::subrange{first, last}, pred, proj);
-  if (first == last)
-    return first;
-
-  for (auto n_first = std::next(first); n_first != last; ++n_first) {
-    if (pred(proj(*n_first)))
-      std::iter_swap(first++, n_first);
-  }
-
-  return first;
-}
-
-template <std::ranges::forward_range Range, typename Proj = std::identity,
-          std::indirect_unary_predicate<
-              std::projected<std::ranges::iterator_t<Range>, Proj>>
-              Pred = std::ranges::less>
-std::ranges::iterator_t<Range> partition(Range &&range, Pred pred = {},
-                                         Proj proj = {}) {
-  return partition(std::ranges::begin(range), std::ranges::end(range), pred,
-                   proj);
 }
 
 } // namespace
@@ -56,12 +31,12 @@ int main(int argc, char const *argv[]) {
   std::cout << "input array: ";
   print(v);
 
-  auto const pp = partition(v, [](auto x) { return x < 0; });
+  auto const pp = xroost::algo::partition(v, [](auto x) { return x < 0; });
 
-  std::cout << "first part partitioned array: ";
+  std::cout << "first part of the partitioned array: ";
   print(std::ranges::subrange{v.begin(), pp});
 
-  std::cout << "last part partitioned array: ";
+  std::cout << "last part of the partitioned array: ";
   print(std::ranges::subrange{pp, v.end()});
 
   return 0;

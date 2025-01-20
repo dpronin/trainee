@@ -1,0 +1,9 @@
+[requires]
+xroost/[0.5.0]
+
+[generators]
+CMakeToolchain
+CMakeDeps
+
+[layout]
+cmake_layout
