@@ -1,9 +1,7 @@
 #include <algorithm>
-#include <functional>
 #include <iostream>
 #include <iterator>
 #include <ranges>
-#include <sstream>
 #include <vector>
 
 #include <xroost/algo/partition.hpp>
@@ -20,13 +18,10 @@ template <std::ranges::input_range Range> void print(Range const &v) {
 } // namespace
 
 int main(int argc, char const *argv[]) {
-  auto v{std::vector<int>(argc - 1)};
+  std::vector<int> v;
 
-  std::transform(argv + 1, argv + argc, v.begin(), [](char const *arg) {
-    int v;
-    std::istringstream{arg} >> v;
-    return v;
-  });
+  std::copy(std::istream_iterator<int>(std::cin), std::istream_iterator<int>(),
+            std::back_inserter(v));
 
   std::cout << "input array: ";
   print(v);
