@@ -5,6 +5,7 @@
 #include <concepts>
 #include <format>
 #include <iostream>
+#include <print>
 #include <typeindex>
 
 #include <xroost/endian/endian.hpp>
