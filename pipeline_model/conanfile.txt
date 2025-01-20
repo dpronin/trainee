@@ -1,5 +1,5 @@
 [requires]
-boost/[~1.85]
+boost/[~1.86]
 
 [generators]
 CMakeToolchain
