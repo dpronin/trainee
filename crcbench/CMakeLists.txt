@@ -4,16 +4,32 @@ project(crcbench VERSION 0.1.0 LANGUAGES CXX)
 
 find_package(Boost CONFIG REQUIRED)
 find_package(benchmark CONFIG REQUIRED)
+find_package(Threads REQUIRED)
+find_package(xroost REQUIRED)
 
-add_executable(${PROJECT_NAME}
+set(CMAKE_CXX_STANDARD 20)
+
+foreach(bench bench1 bench2)
+    add_executable(${bench})
+    target_link_libraries(${bench} PRIVATE
+        Threads::Threads
+        benchmark::benchmark
+        benchmark::benchmark_main
+        Boost::boost
+    )
+    target_compile_features(${bench} PRIVATE cxx_std_20)
+endforeach()
+
+target_sources(bench1 PRIVATE
     crc32c.h
     crc32c.cpp
-    bench.cpp
+    bench1.cpp
 )
 
-target_link_libraries(${PROJECT_NAME} PRIVATE
-    Boost::boost
-    benchmark::benchmark
+target_sources(bench2 PRIVATE
+    bench2.cpp
 )
-target_compile_features(${PROJECT_NAME} PRIVATE cxx_std_20)
-target_include_directories(${PROJECT_NAME} PRIVATE ${CMAKE_CURRENT_LIST_DIR})
+
+target_link_libraries(bench2 PRIVATE
+    xroost::xroost
+)

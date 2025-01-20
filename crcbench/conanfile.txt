@@ -1,5 +1,7 @@
 [test_requires]
-benchmark/[~1.8]
+boost/[~1.86]
+xroost/[0.8.0]
+benchmark/[~1.9]
 
 [generators]
 CMakeToolchain
