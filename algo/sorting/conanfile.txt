@@ -1,5 +1,5 @@
 [requires]
-xroost/[0.5.0]
+xroost/[~0.11]
 
 [generators]
 CMakeToolchain

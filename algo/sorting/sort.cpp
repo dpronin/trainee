@@ -12,6 +12,7 @@
 #include <iostream>
 #include <iterator>
 #include <ranges>
+#include <string_view>
 #include <vector>
 
 #include <xroost/algo/sorting/sort_all.hpp>
@@ -25,6 +26,7 @@ enum class algo {
   quick,
   quick_r,
   selection,
+  counting,
   //
   _default_ = bubble,
 };
@@ -40,7 +42,7 @@ template <std::ranges::input_range Range> void print(Range const &v) {
 [[noreturn]] void show_help(char const *program) {
   std::string_view const help{
       R"HELP(
---algo           Algorithm to sort: bubble, heap, insertion, quick, quick_r, selection. Default 'bubble'
+--algo           Algorithm to sort: bubble, heap, insertion, quick, quick_r, selection, counting. Default 'bubble'
 --help, -h       Show this help page
     )HELP",
   };
@@ -59,22 +61,24 @@ int main(int argc, char const *argv[]) {
   auto const fargv = argv;
   auto const largv = argv + argc;
 
-  for (auto arg = fargv; largv != arg; ++arg) {
-    if ((!strcmp(*arg, "--algo") || !strcmp(*arg, "--algo")) &&
-        (arg + 1) != largv) {
+  for (auto const *arg{fargv}; largv != arg; ++arg) {
+    if (auto sarg{std::string_view{*arg}};
+        "--argo" == sarg && (arg + 1) != largv) {
       ++arg;
-      if (!strcmp(*arg, "bubble")) {
+      if ("bubble" == sarg) {
         algo = algo::bubble;
-      } else if (!strcmp(*arg, "heap")) {
+      } else if ("heap" == sarg) {
         algo = algo::heap;
-      } else if (!strcmp(*arg, "insertion")) {
+      } else if ("insertion" == sarg) {
         algo = algo::insertion;
-      } else if (!strcmp(*arg, "quick")) {
+      } else if ("quick" == sarg) {
         algo = algo::quick;
-      } else if (!strcmp(*arg, "quick_r")) {
+      } else if ("quick_r" == sarg) {
         algo = algo::quick_r;
-      } else if (!strcmp(*arg, "selection")) {
+      } else if ("selection" == sarg) {
         algo = algo::selection;
+      } else if ("counting" == sarg) {
+        algo = algo::counting;
       } else {
         std::cerr << "unknown algorithm specified, use default";
       }
@@ -116,6 +120,10 @@ int main(int argc, char const *argv[]) {
   case algo::selection:
     std::cout << "use selection sort algorithm" << std::endl;
     xroost::algo::selection_sort(v);
+    break;
+  case algo::counting:
+    std::cout << "use counting sort algorithm" << std::endl;
+    xroost::algo::counting_sort(v);
     break;
   }
 
