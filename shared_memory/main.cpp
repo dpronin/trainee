@@ -65,10 +65,10 @@ struct process_shared_data {
   std::unique_ptr<IShared, placement_deleter<IShared>> ptr;
 };
 
-/* Run example: ./interprocessspscqueue */
+/* Run example: ./shared_memory */
 int main(int argc, char const *argv[]) {
   /*
-   * Create a memory mapping where shared data among parent and children
+   * Create a memory mapping where shared data among the parent and the child
    * processes would be located
    */
   auto *proc_info_raw{
@@ -93,7 +93,7 @@ int main(int argc, char const *argv[]) {
           process_shared_data_deleter,
       };
 
-  auto const child = fork();
+  auto const child{fork()};
   if (0 == child) {
     p_info->ptr->print();
     _Exit(EXIT_SUCCESS);
@@ -103,7 +103,7 @@ int main(int argc, char const *argv[]) {
 
   p_info->ptr->print();
 
-  /* While there are children we would wait for them all to exit */
+  /* We would wait for the child to exit */
   int wstatus{0};
   auto const pid{waitpid(child, &wstatus, 0)};
   assert(pid == child);
