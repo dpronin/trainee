@@ -58,34 +58,6 @@ void insertion_sort(ForwardIterator first, ForwardIterator last) noexcept {
   }
 }
 
-template <typename BidirectionalIterator>
-void quick_sort(BidirectionalIterator first,
-                BidirectionalIterator last) noexcept {
-  auto itLeft = first;
-  auto itRight = last;
-
-  if (last <= itLeft || itLeft == --itRight)
-    return;
-
-  auto itItem = std::next(first, std::distance(first, last) / 2);
-
-  while (itLeft < itRight) {
-    while (*itLeft < *itItem)
-      ++itLeft;
-    while (*itItem < *itRight)
-      --itRight;
-    if (itLeft <= itRight) {
-      if (itLeft != itRight)
-        std::iter_swap(itLeft, itRight);
-      ++itLeft;
-      --itRight;
-    }
-  }
-
-  quick_sort(first, std::next(itRight));
-  quick_sort(itLeft, last);
-}
-
 } // namespace algo
 
 #endif

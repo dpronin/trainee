@@ -82,7 +82,7 @@ int main(int argc, char const *argv[]) {
       } else {
         std::cerr << "unknown algorithm specified, use default";
       }
-    } else if (!(strcmp(*arg, "--help") && strcmp(*arg, "-h"))) {
+    } else if (sarg == "--help" || sarg == "-h") {
       show_help(argv[0]);
       /* must not be here */
       std::abort();

@@ -12,6 +12,7 @@
 #include <iostream>
 #include <iterator>
 #include <ranges>
+#include <span>
 #include <vector>
 
 namespace {
@@ -30,8 +31,8 @@ namespace {
 } // namespace
 
 int main(int argc, char const *argv[]) {
-  for (auto const *arg : std::ranges::subrange{argv, argv + argc}) {
-    if (!(strcmp(arg, "--help") && strcmp(arg, "-h"))) {
+  for (auto const *arg : std::span<char const *>{argv, argv + argc}) {
+    if (std::string_view sarg{arg}; sarg == "--help" || sarg == "-h") {
       show_help(argv[0]);
       /* must not be here */
       std::abort();
