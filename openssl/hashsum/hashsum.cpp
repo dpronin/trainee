@@ -1,6 +1,4 @@
 #include <openssl/evp.h>
-#include <openssl/md5.h>
-#include <openssl/sha.h>
 
 #include <cstdio>
 #include <memory>
@@ -24,44 +22,40 @@ int main(int argc, char const *argv[]) {
   };
   auto ctx = std::unique_ptr<EVP_MD_CTX, evp_md_ctx_deleter>{EVP_MD_CTX_new()};
 
-  std::vector<unsigned char> digest;
   EVP_MD const *algo_md = nullptr;
 
   using namespace std::string_view_literals;
   if ("md5"sv == algo_s) {
     algo_md = EVP_md5();
-    digest.resize(MD5_DIGEST_LENGTH);
   } else if ("sha1"sv == algo_s) {
     algo_md = EVP_sha1();
-    digest.resize(SHA_DIGEST_LENGTH);
   } else if ("sha224"sv == algo_s) {
     algo_md = EVP_sha224();
-    digest.resize(SHA224_DIGEST_LENGTH);
   } else if ("sha256"sv == algo_s) {
     algo_md = EVP_sha256();
-    digest.resize(SHA256_DIGEST_LENGTH);
   } else if ("sha384"sv == algo_s) {
     algo_md = EVP_sha384();
-    digest.resize(SHA384_DIGEST_LENGTH);
   } else if ("sha512"sv == algo_s) {
     algo_md = EVP_sha512();
-    digest.resize(SHA512_DIGEST_LENGTH);
   } else if ("sha3-224"sv == algo_s) {
     algo_md = EVP_sha3_224();
-    digest.resize(SHA3_224_DIGEST_LENGTH);
   } else if ("sha3-256"sv == algo_s) {
     algo_md = EVP_sha3_256();
-    digest.resize(SHA3_256_DIGEST_LENGTH);
   } else if ("sha3-384"sv == algo_s) {
     algo_md = EVP_sha3_384();
-    digest.resize(SHA3_384_DIGEST_LENGTH);
   } else if ("sha3-512"sv == algo_s) {
     algo_md = EVP_sha3_512();
-    digest.resize(SHA3_512_DIGEST_LENGTH);
   } else {
     std::fprintf(stderr, "unsupported digest algorithm '%s' given\n", algo_s);
     return 1;
   }
+
+  int const md_size = EVP_MD_size(algo_md);
+  if (md_size <= 0) {
+    std::fprintf(stderr, "invalid digest size for '%s'\n", algo_s);
+    return 1;
+  }
+  std::vector<unsigned char> digest(static_cast<size_t>(md_size));
 
   if (1 != EVP_DigestInit_ex2(ctx.get(), algo_md, nullptr)) {
     std::fprintf(stdout, "digest '%s' init failed\n", algo_s);
