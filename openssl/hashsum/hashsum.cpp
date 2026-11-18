@@ -12,7 +12,8 @@ constexpr size_t kChunkSz = 32;
 int main(int argc, char const *argv[]) {
   if (argc < 2) {
     std::fprintf(stdout, "digest algorithm specification required: md5 | "
-                         "sha224 | sha256 | sha384 | sha512\n");
+                         "sha1 | sha224 | sha256 | sha384 | sha512 | "
+                         "sha3-224 | sha3-256 | sha3-384 | sha3-512\n");
     return 1;
   }
 
@@ -30,6 +31,9 @@ int main(int argc, char const *argv[]) {
   if ("md5"sv == algo_s) {
     algo_md = EVP_md5();
     digest.resize(MD5_DIGEST_LENGTH);
+  } else if ("sha1"sv == algo_s) {
+    algo_md = EVP_sha1();
+    digest.resize(SHA_DIGEST_LENGTH);
   } else if ("sha224"sv == algo_s) {
     algo_md = EVP_sha224();
     digest.resize(SHA224_DIGEST_LENGTH);
@@ -42,6 +46,18 @@ int main(int argc, char const *argv[]) {
   } else if ("sha512"sv == algo_s) {
     algo_md = EVP_sha512();
     digest.resize(SHA512_DIGEST_LENGTH);
+  } else if ("sha3-224"sv == algo_s) {
+    algo_md = EVP_sha3_224();
+    digest.resize(SHA3_224_DIGEST_LENGTH);
+  } else if ("sha3-256"sv == algo_s) {
+    algo_md = EVP_sha3_256();
+    digest.resize(SHA3_256_DIGEST_LENGTH);
+  } else if ("sha3-384"sv == algo_s) {
+    algo_md = EVP_sha3_384();
+    digest.resize(SHA3_384_DIGEST_LENGTH);
+  } else if ("sha3-512"sv == algo_s) {
+    algo_md = EVP_sha3_512();
+    digest.resize(SHA3_512_DIGEST_LENGTH);
   } else {
     std::fprintf(stderr, "unsupported digest algorithm '%s' given\n", algo_s);
     return 1;
